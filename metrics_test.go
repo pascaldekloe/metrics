@@ -2,21 +2,27 @@ package metrics
 
 import (
 	"mime"
+	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
-	"sync"
 	"testing"
 )
 
-func init() {
-	// mockup
-	nowMilli = func() int64 { return 1548759822954 }
+func reset() {
+	gauges = nil
+	gaugeIndices = make(map[string]int)
+	counters = nil
+	counterIndices = make(map[string]int)
 }
 
 func TestSerialize(t *testing.T) {
-	// cleanup
+	nowMilliBackup := nowMilli
+	nowMilli = func() int64 { return 1548759822954 }
 	defer func() {
-		registry = sync.Map{}
+		nowMilli = nowMilliBackup
+
+		reset()
 	}()
 
 	MustPlaceGauge("g1").Help("🆘")
@@ -66,5 +72,60 @@ func TestHTTPMethods(t *testing.T) {
 	allow := got.Header.Get("Allow")
 	if !strings.Contains(allow, "OPTIONS") || !strings.Contains(allow, "GET") || !strings.Contains(allow, "HEAD") {
 		t.Errorf("got allow %q, want OPTIONS, GET and HEAD", allow)
+	}
+}
+
+func BenchmarkMustPlace(b *testing.B) {
+	defer reset()
+
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		MustPlaceGauge("some_arbitrary_test_unit")
+	}
+}
+
+func BenchmarkHelp(b *testing.B) {
+	defer reset()
+
+	b.ReportAllocs()
+
+	g := MustPlaceGauge("some_arbitrary_test_unit")
+	for i := 0; i < b.N; i++ {
+		g.Help("some arbitrary test text")
+	}
+}
+
+type voidResponseWriter http.Header
+
+func (void voidResponseWriter) Header() http.Header    { return http.Header(void) }
+func (voidResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
+func (voidResponseWriter) WriteHeader(statusCode int)  {}
+
+func BenchmarkHTTPHandler(b *testing.B) {
+	defer reset()
+
+	seedN := func(n int) {
+		for i := n / 2; i > 0; i-- {
+			MustPlaceGauge("some_arbitrary_test_unit" + strconv.Itoa(i)).Set(int64(i))
+		}
+		for i := n / 2; i > 0; i-- {
+			MustPlaceCounter("some_arbitrary_count" + strconv.Itoa(i)).Add(uint64(i))
+		}
+	}
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp := voidResponseWriter{}
+
+	for _, n := range []int{0, 32, 1024, 32768} {
+		seedN(n)
+
+		b.Run(strconv.Itoa(n)+"-metrics", func(b *testing.B) {
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				HTTPHandler(resp, req)
+			}
+		})
 	}
 }

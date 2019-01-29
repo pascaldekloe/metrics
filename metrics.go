@@ -32,28 +32,36 @@ func (g *Gauge) Set(update int64) { atomic.StoreInt64(&g.n, update) }
 // Multiple goroutines may invoke this method simultaneously.
 func (c *Counter) Add(diff uint64) { atomic.AddUint64(&c.n, diff) }
 
-var registry sync.Map
+var (
+	gaugeMutex   sync.Mutex
+	gauges       []*Gauge
+	gaugeIndices = make(map[string]int)
+
+	counterMutex   sync.Mutex
+	counters       []*Counter
+	counterIndices = make(map[string]int)
+)
 
 // MustPlaceGauge registers a new Gauge if name hasn't been used before.
 // A panic is raised when name is already in use as another metric type.
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
 
-	g := new(Gauge)
-	g.label = append(g.label, "# TYPE gauge\n"...)
-	g.label = append(g.label, name...)
-	g.label = append(g.label, ' ')
+	g := &Gauge{label: make([]byte, 14+len(name))}
+	copy(g.label, "# TYPE gauge\n")
+	copy(g.label[13:], name)
+	g.label[13+len(name)] = ' '
 
-	current, loaded := registry.LoadOrStore(name, g)
-	if !loaded {
-		return g
+	gaugeMutex.Lock()
+	if i, ok := gaugeIndices[name]; ok {
+		g = gauges[i]
+	} else {
+		gaugeIndices[name] = len(gauges)
+		gauges = append(gauges, g)
 	}
+	gaugeMutex.Unlock()
 
-	c, ok := current.(*Gauge)
-	if !ok {
-		panic("metrics: name duplicate")
-	}
-	return c
+	return g
 }
 
 // MustPlaceCounter registers a new Counter if name hasn't been used before.
@@ -61,20 +69,20 @@ func MustPlaceGauge(name string) *Gauge {
 func MustPlaceCounter(name string) *Counter {
 	mustValidName(name)
 
-	c := new(Counter)
-	c.label = append(c.label, "# TYPE counter\n"...)
-	c.label = append(c.label, name...)
-	c.label = append(c.label, ' ')
+	c := &Counter{label: make([]byte, 16+len(name))}
+	copy(c.label, "# TYPE counter\n")
+	copy(c.label[15:], name)
+	c.label[15+len(name)] = ' '
 
-	current, loaded := registry.LoadOrStore(name, c)
-	if !loaded {
-		return c
+	counterMutex.Lock()
+	if i, ok := counterIndices[name]; ok {
+		c = counters[i]
+	} else {
+		counterIndices[name] = len(counters)
+		counters = append(counters, c)
 	}
+	counterMutex.Unlock()
 
-	c, ok := current.(*Counter)
-	if !ok {
-		panic("metrics: name duplicate")
-	}
 	return c
 }
 
@@ -160,19 +168,23 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	timeTail[0] = ' '
 
 	buf := make([]byte, 0, 16)
-	registry.Range(func(key, value interface{}) bool {
-		switch t := value.(type) {
-		case *Gauge:
-			w.Write(t.label)
-			w.Write(strconv.AppendInt(buf, atomic.LoadInt64(&t.n), 10))
-			w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
 
-		case *Counter:
-			w.Write(t.label)
-			w.Write(strconv.AppendUint(buf, atomic.LoadUint64(&t.n), 10))
-			w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
-		}
+	gaugeMutex.Lock()
+	gaugesView := gauges[:]
+	gaugeMutex.Unlock()
+	for _, g := range gaugesView {
+		w.Write(g.label)
+		w.Write(strconv.AppendInt(buf, atomic.LoadInt64(&g.n), 10))
+		w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
+	}
 
-		return true
-	})
+	counterMutex.Lock()
+	countersView := counters[:]
+	counterMutex.Unlock()
+
+	for _, c := range countersView {
+		w.Write(c.label)
+		w.Write(strconv.AppendUint(buf, atomic.LoadUint64(&c.n), 10))
+		w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
+	}
 }
