@@ -24,11 +24,15 @@ type Counter struct {
 	label []byte
 }
 
-// Set updates the state.
+// Set updates the value.
 // Multiple goroutines may invoke this method simultaneously.
 func (g *Gauge) Set(update int64) { atomic.StoreInt64(&g.n, update) }
 
-// Add changes the state.
+// Add increments the value with diff.
+// Multiple goroutines may invoke this method simultaneously.
+func (g *Gauge) Add(diff int64) { atomic.AddInt64(&g.n, diff) }
+
+// Add increments the value with diff.
 // Multiple goroutines may invoke this method simultaneously.
 func (c *Counter) Add(diff uint64) { atomic.AddUint64(&c.n, diff) }
 
