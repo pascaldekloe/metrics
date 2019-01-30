@@ -17,10 +17,10 @@ func reset() {
 }
 
 func TestSerialize(t *testing.T) {
-	nowMilliBackup := nowMilli
-	nowMilli = func() int64 { return 1548759822954 }
+	backup := epochMilliseconds
+	epochMilliseconds = func() int64 { return 1548759822954 }
 	defer func() {
-		nowMilli = nowMilliBackup
+		epochMilliseconds = backup
 
 		reset()
 	}()

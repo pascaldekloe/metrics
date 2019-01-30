@@ -47,7 +47,8 @@ var (
 )
 
 // MustPlaceGauge registers a new Gauge if name hasn't been used before.
-// A panic is raised when name is already in use as another metric type.
+// The function panics when name does not match [a-zA-Z_:][a-zA-Z0-9_:]*
+// or when name is already in use as another metric type.
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
 
@@ -69,7 +70,8 @@ func MustPlaceGauge(name string) *Gauge {
 }
 
 // MustPlaceCounter registers a new Counter if name hasn't been used before.
-// A panic is raised when name is already in use as another metric type.
+// The function panics when name does not match [a-zA-Z_:][a-zA-Z0-9_:]*
+// or when name is already in use as another metric type.
 func MustPlaceCounter(name string) *Counter {
 	mustValidName(name)
 
@@ -109,9 +111,9 @@ func (g *Gauge) Help(text string) (this *Gauge) {
 }
 
 // Help sets the text.
-func (g *Counter) Help(text string) (this *Counter) {
-	g.label = labelHelp(g.label, text)
-	return g
+func (c *Counter) Help(text string) (this *Counter) {
+	c.label = labelHelp(c.label, text)
+	return c
 }
 
 func labelHelp(label []byte, text string) []byte {
@@ -153,7 +155,7 @@ func labelHelp(label []byte, text string) []byte {
 	return append(buf, label...)
 }
 
-var nowMilli = func() int64 { return time.Now().UnixNano() / 1e6 }
+var epochMilliseconds = func() int64 { return time.Now().UnixNano() / 1e6 }
 
 // HTTPHandler serves Prometheus on a /metrics endpoint.
 func HTTPHandler(w http.ResponseWriter, r *http.Request) {
@@ -179,16 +181,15 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	for _, g := range gaugesView {
 		w.Write(g.label)
 		w.Write(strconv.AppendInt(buf, atomic.LoadInt64(&g.n), 10))
-		w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
+		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))
 	}
 
 	counterMutex.Lock()
 	countersView := counters[:]
 	counterMutex.Unlock()
-
 	for _, c := range countersView {
 		w.Write(c.label)
 		w.Write(strconv.AppendUint(buf, atomic.LoadUint64(&c.n), 10))
-		w.Write(append(strconv.AppendInt(timeTail, nowMilli(), 10), '\n'))
+		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))
 	}
 }
