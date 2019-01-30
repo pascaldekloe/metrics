@@ -9,11 +9,17 @@ import (
 	"time"
 )
 
+const (
+	helpPrefix = "# HELP "
+	typePrefix = "# TYPE "
+)
+
 // Gauge is a metric that represents a single numerical value that can
 // arbitrarily go up and down.
 type Gauge struct {
 	n     int64
 	label []byte
+	help  []byte
 }
 
 // Counter is a cumulative metric that represents a single monotonically
@@ -22,6 +28,7 @@ type Gauge struct {
 type Counter struct {
 	n     uint64
 	label []byte
+	help  []byte
 }
 
 // Set updates the value.
@@ -52,10 +59,14 @@ var (
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
 
-	g := &Gauge{label: make([]byte, 14+len(name))}
-	copy(g.label, "# TYPE gauge\n")
-	copy(g.label[13:], name)
-	g.label[13+len(name)] = ' '
+	label := make([]byte, 15+2*len(name))
+	copy(label, typePrefix)
+	copy(label[7:], name)
+	copy(label[7+len(name):], " gauge\n")
+	copy(label[14+len(name):], name)
+	label[len(label)-1] = ' '
+
+	g := &Gauge{label: label}
 
 	gaugeMutex.Lock()
 	if i, ok := gaugeIndices[name]; ok {
@@ -75,10 +86,14 @@ func MustPlaceGauge(name string) *Gauge {
 func MustPlaceCounter(name string) *Counter {
 	mustValidName(name)
 
-	c := &Counter{label: make([]byte, 16+len(name))}
-	copy(c.label, "# TYPE counter\n")
-	copy(c.label[15:], name)
-	c.label[15+len(name)] = ' '
+	label := make([]byte, 17+2*len(name))
+	copy(label, typePrefix)
+	copy(label[7:], name)
+	copy(label[7+len(name):], " counter\n")
+	copy(label[16+len(name):], name)
+	label[len(label)-1] = ' '
+
+	c := &Counter{label: label}
 
 	counterMutex.Lock()
 	if i, ok := counterIndices[name]; ok {
@@ -106,34 +121,31 @@ func mustValidName(s string) {
 
 // Help sets the text.
 func (g *Gauge) Help(text string) (this *Gauge) {
-	g.label = labelHelp(g.label, text)
+	g.help = labelHelp(g.label, text)
 	return g
 }
 
 // Help sets the text.
 func (c *Counter) Help(text string) (this *Counter) {
-	c.label = labelHelp(c.label, text)
+	c.help = labelHelp(c.label, text)
 	return c
 }
 
 func labelHelp(label []byte, text string) []byte {
-	const helpPrefix = "# HELP "
-
-	// drop previous if any
+	// get name from label
+	var name []byte
 	for i, c := range label {
-		if i < len(helpPrefix) {
-			if helpPrefix[i] != c {
-				break
-			}
-		} else if c == '\n' {
-			label = label[i+1:]
+		if i > len(typePrefix) && c == ' ' {
+			name = label[len(typePrefix):i]
 			break
 		}
 	}
 
-	// start help in new buffer
-	buf := make([]byte, len(helpPrefix), len(helpPrefix)+len(text)+len(label)+2)
+	// compose help in new buffer
+	buf := make([]byte, len(helpPrefix)+len(name)+1, len(helpPrefix)+len(name)+len(text)+2)
 	copy(buf, helpPrefix)
+	copy(buf[len(helpPrefix):], name)
+	buf[len(helpPrefix)+len(name)] = ' '
 
 	// add escaped text
 	for i := 0; i < len(text); i++ {
@@ -148,11 +160,8 @@ func labelHelp(label []byte, text string) []byte {
 		}
 	}
 
-	// terminate help
-	buf = append(buf, '\n')
-
-	// join with label
-	return append(buf, label...)
+	// terminate help line
+	return append(buf, '\n')
 }
 
 var epochMilliseconds = func() int64 { return time.Now().UnixNano() / 1e6 }
@@ -179,6 +188,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	gaugesView := gauges[:]
 	gaugeMutex.Unlock()
 	for _, g := range gaugesView {
+		w.Write(g.help)
 		w.Write(g.label)
 		w.Write(strconv.AppendInt(buf, atomic.LoadInt64(&g.n), 10))
 		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))
@@ -188,6 +198,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	countersView := counters[:]
 	counterMutex.Unlock()
 	for _, c := range countersView {
+		w.Write(c.help)
 		w.Write(c.label)
 		w.Write(strconv.AppendUint(buf, atomic.LoadUint64(&c.n), 10))
 		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))

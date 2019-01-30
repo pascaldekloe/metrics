@@ -42,21 +42,16 @@ func TestSerialize(t *testing.T) {
 		t.Errorf("got content type %q, want UTF-8 charset", contentType)
 	}
 
-	const wantGauge = `# HELP 🆘
-# TYPE gauge
+	const want = `# HELP g1 🆘
+# TYPE g1 gauge
 g1 42 1548759822954
-`
-	const wantCounter = `# HELP escape\n… and \\
-# TYPE counter
+# HELP c1 escape\n… and \\
+# TYPE c1 counter
 c1 9 1548759822954
 `
-
-	switch got := rec.Body.String(); got {
-	case wantGauge + wantCounter, wantCounter + wantGauge:
-		break
-	default:
-		t.Errorf("got body  %q", got)
-		t.Errorf("want %q and %q", wantGauge, wantCounter)
+	if got := rec.Body.String(); got != want {
+		t.Errorf("got %q", got)
+		t.Errorf("want %q", want)
 	}
 }
 
