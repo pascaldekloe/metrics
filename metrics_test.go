@@ -17,10 +17,13 @@ func reset() {
 }
 
 func TestSerialize(t *testing.T) {
-	backup := epochMilliseconds
-	epochMilliseconds = func() int64 { return 1548759822954 }
+	// mockup
+	backup := appendTimeTail
+	appendTimeTail = func(buf []byte) []byte {
+		return append(buf, "1548759822954\n"...)
+	}
 	defer func() {
-		epochMilliseconds = backup
+		appendTimeTail = backup
 
 		reset()
 	}()

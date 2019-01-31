@@ -17,8 +17,8 @@ const (
 // Gauge is a metric that represents a single numerical value that can
 // arbitrarily go up and down.
 type Gauge struct {
-	n     int64
-	label []byte
+	value int64
+	head  []byte
 	help  []byte
 }
 
@@ -26,22 +26,22 @@ type Gauge struct {
 // increasing counter whose value can only increase or be reset to zero on
 // restart.
 type Counter struct {
-	n     uint64
-	label []byte
+	value uint64
+	head  []byte
 	help  []byte
 }
 
 // Set updates the value.
 // Multiple goroutines may invoke this method simultaneously.
-func (g *Gauge) Set(update int64) { atomic.StoreInt64(&g.n, update) }
+func (g *Gauge) Set(update int64) { atomic.StoreInt64(&g.value, update) }
 
 // Add increments the value with diff.
 // Multiple goroutines may invoke this method simultaneously.
-func (g *Gauge) Add(diff int64) { atomic.AddInt64(&g.n, diff) }
+func (g *Gauge) Add(diff int64) { atomic.AddInt64(&g.value, diff) }
 
 // Add increments the value with diff.
 // Multiple goroutines may invoke this method simultaneously.
-func (c *Counter) Add(diff uint64) { atomic.AddUint64(&c.n, diff) }
+func (c *Counter) Add(diff uint64) { atomic.AddUint64(&c.value, diff) }
 
 var (
 	gaugeMutex   sync.Mutex
@@ -59,14 +59,14 @@ var (
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
 
-	label := make([]byte, 15+2*len(name))
-	copy(label, typePrefix)
-	copy(label[7:], name)
-	copy(label[7+len(name):], " gauge\n")
-	copy(label[14+len(name):], name)
-	label[len(label)-1] = ' '
+	head := make([]byte, 15+2*len(name))
+	copy(head, typePrefix)
+	copy(head[7:], name)
+	copy(head[7+len(name):], " gauge\n")
+	copy(head[14+len(name):], name)
+	head[len(head)-1] = ' '
 
-	g := &Gauge{label: label}
+	g := &Gauge{head: head}
 
 	gaugeMutex.Lock()
 	if i, ok := gaugeIndices[name]; ok {
@@ -86,14 +86,14 @@ func MustPlaceGauge(name string) *Gauge {
 func MustPlaceCounter(name string) *Counter {
 	mustValidName(name)
 
-	label := make([]byte, 17+2*len(name))
-	copy(label, typePrefix)
-	copy(label[7:], name)
-	copy(label[7+len(name):], " counter\n")
-	copy(label[16+len(name):], name)
-	label[len(label)-1] = ' '
+	head := make([]byte, 17+2*len(name))
+	copy(head, typePrefix)
+	copy(head[7:], name)
+	copy(head[7+len(name):], " counter\n")
+	copy(head[16+len(name):], name)
+	head[len(head)-1] = ' '
 
-	c := &Counter{label: label}
+	c := &Counter{head: head}
 
 	counterMutex.Lock()
 	if i, ok := counterIndices[name]; ok {
@@ -121,22 +121,22 @@ func mustValidName(s string) {
 
 // Help sets the text.
 func (g *Gauge) Help(text string) (this *Gauge) {
-	g.help = labelHelp(g.label, text)
+	g.help = headHelp(g.head, text)
 	return g
 }
 
 // Help sets the text.
 func (c *Counter) Help(text string) (this *Counter) {
-	c.help = labelHelp(c.label, text)
+	c.help = headHelp(c.head, text)
 	return c
 }
 
-func labelHelp(label []byte, text string) []byte {
-	// get name from label
+func headHelp(head []byte, text string) []byte {
+	// get name from head
 	var name []byte
-	for i, c := range label {
+	for i, c := range head {
 		if i > len(typePrefix) && c == ' ' {
-			name = label[len(typePrefix):i]
+			name = head[len(typePrefix):i]
 			break
 		}
 	}
@@ -164,7 +164,11 @@ func labelHelp(label []byte, text string) []byte {
 	return append(buf, '\n')
 }
 
-var epochMilliseconds = func() int64 { return time.Now().UnixNano() / 1e6 }
+var appendTimeTail = func(buf []byte) []byte {
+	ms := time.Now().UnixNano() / 1e6
+	buf = strconv.AppendInt(buf, ms, 10)
+	return append(buf, '\n')
+}
 
 // HTTPHandler serves Prometheus on a /metrics endpoint.
 func HTTPHandler(w http.ResponseWriter, r *http.Request) {
@@ -179,28 +183,53 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 
+	buf := make([]byte, 0, 4096)
 	timeTail := make([]byte, 1, 15)
 	timeTail[0] = ' '
-
-	buf := make([]byte, 0, 16)
 
 	gaugeMutex.Lock()
 	gaugesView := gauges[:]
 	gaugeMutex.Unlock()
+
+	timeTail = appendTimeTail(timeTail)
 	for _, g := range gaugesView {
-		w.Write(g.help)
-		w.Write(g.label)
-		w.Write(strconv.AppendInt(buf, atomic.LoadInt64(&g.n), 10))
-		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))
+		buf = g.appendSample(buf)
+		buf = append(buf, timeTail...)
+		if len(buf) > 3800 {
+			w.Write(buf)
+			buf = buf[:0]
+			timeTail = appendTimeTail(timeTail[:1])
+		}
 	}
 
 	counterMutex.Lock()
 	countersView := counters[:]
 	counterMutex.Unlock()
+
+	timeTail = appendTimeTail(timeTail[:1])
 	for _, c := range countersView {
-		w.Write(c.help)
-		w.Write(c.label)
-		w.Write(strconv.AppendUint(buf, atomic.LoadUint64(&c.n), 10))
-		w.Write(append(strconv.AppendInt(timeTail, epochMilliseconds(), 10), '\n'))
+		buf = c.appendSample(buf)
+		buf = append(buf, timeTail...)
+		if len(buf) > 3800 {
+			w.Write(buf)
+			buf = buf[:0]
+			timeTail = appendTimeTail(timeTail[:1])
+		}
 	}
+
+	w.Write(buf)
+}
+
+// AppendSample applies the line format, open-ended.
+func (g *Gauge) appendSample(buf []byte) []byte {
+	buf = append(buf, g.help...)
+	buf = append(buf, g.head...)
+	return strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
+}
+
+// AppendSample applies the line format, open-ended.
+func (c *Counter) appendSample(buf []byte) []byte {
+	buf = append(buf, c.help...)
+	buf = append(buf, c.head...)
+	return strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
 }

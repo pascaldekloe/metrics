@@ -10,16 +10,16 @@ This is free and unencumbered software released into the
 
 ```
 name                          time/op
-HTTPHandler/0-metrics-12       139ns ± 1%
-HTTPHandler/32-metrics-12     4.00µs ± 0%
-HTTPHandler/1024-metrics-12    132µs ± 4%
-HTTPHandler/32768-metrics-12  4.28ms ± 3%
+HTTPHandler/0-metrics-12       948ns ± 0%
+HTTPHandler/32-metrics-12     1.68µs ± 0%
+HTTPHandler/1024-metrics-12   33.6µs ± 4%
+HTTPHandler/32768-metrics-12  1.11ms ± 6%
 
 name                          alloc/op
-HTTPHandler/0-metrics-12       48.0B ± 0%
-HTTPHandler/32-metrics-12      48.0B ± 0%
-HTTPHandler/1024-metrics-12    48.0B ± 0%
-HTTPHandler/32768-metrics-12   48.0B ± 0%
+HTTPHandler/0-metrics-12      4.13kB ± 0%
+HTTPHandler/32-metrics-12     4.13kB ± 0%
+HTTPHandler/1024-metrics-12   4.13kB ± 0%
+HTTPHandler/32768-metrics-12  4.13kB ± 0%
 
 name                          allocs/op
 HTTPHandler/0-metrics-12        3.00 ± 0%
