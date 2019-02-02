@@ -10,10 +10,9 @@ import (
 )
 
 func reset() {
+	indices = make(map[string]uint32)
 	gauges = nil
-	gaugeIndices = make(map[string]int)
 	counters = nil
-	counterIndices = make(map[string]int)
 }
 
 func TestSerialize(t *testing.T) {
@@ -46,9 +45,9 @@ func TestSerialize(t *testing.T) {
 	}
 
 	const want = `# HELP g1 🆘
+# HELP c1 escape\n… and \\
 # TYPE g1 gauge
 g1 42 1548759822954
-# HELP c1 escape\n… and \\
 # TYPE c1 counter
 c1 9 1548759822954
 `

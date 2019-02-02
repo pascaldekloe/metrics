@@ -4,6 +4,7 @@ package metrics
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +19,7 @@ const (
 // arbitrarily go up and down.
 type Gauge struct {
 	value int64
-	head  []byte
+	head  string
 	help  []byte
 }
 
@@ -27,7 +28,7 @@ type Gauge struct {
 // restart.
 type Counter struct {
 	value uint64
-	head  []byte
+	head  string
 	help  []byte
 }
 
@@ -43,66 +44,78 @@ func (g *Gauge) Add(diff int64) { atomic.AddInt64(&g.value, diff) }
 // Multiple goroutines may invoke this method simultaneously.
 func (c *Counter) Add(diff uint64) { atomic.AddUint64(&c.value, diff) }
 
-var (
-	gaugeMutex   sync.Mutex
-	gauges       []*Gauge
-	gaugeIndices = make(map[string]int)
+func (g *Gauge) name() string   { return g.head[strings.LastIndexByte(g.head, '\n')+1 : len(g.head)-1] }
+func (c *Counter) name() string { return c.head[strings.LastIndexByte(c.head, '\n')+1 : len(c.head)-1] }
 
-	counterMutex   sync.Mutex
-	counters       []*Counter
-	counterIndices = make(map[string]int)
+var (
+	mutex    sync.Mutex
+	indices  = make(map[string]uint32)
+	gauges   []*Gauge
+	counters []*Counter
 )
 
 // MustPlaceGauge registers a new Gauge if name hasn't been used before.
-// The function panics when name does not match [a-zA-Z_:][a-zA-Z0-9_:]*
-// or when name is already in use as another metric type.
+// The function panics when name is in use as onther metric type or when
+// name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
 
-	head := make([]byte, 15+2*len(name))
-	copy(head, typePrefix)
-	copy(head[7:], name)
-	copy(head[7+len(name):], " gauge\n")
-	copy(head[14+len(name):], name)
-	head[len(head)-1] = ' '
+	var head strings.Builder
+	head.Grow(15 + 2*len(name))
+	head.WriteString(typePrefix)
+	head.WriteString(name)
+	head.WriteString(" gauge\n")
+	head.WriteString(name)
+	head.WriteByte(' ')
 
-	g := &Gauge{head: head}
+	mutex.Lock()
 
-	gaugeMutex.Lock()
-	if i, ok := gaugeIndices[name]; ok {
-		g = gauges[i]
+	var g *Gauge
+	if index, ok := indices[name]; ok {
+		if int(index) >= len(gauges) || gauges[index].name() != name {
+			panic("metrics: name in use as another type")
+		}
+		g = gauges[index]
 	} else {
-		gaugeIndices[name] = len(gauges)
+		g = &Gauge{head: head.String()}
+		indices[name] = uint32(len(gauges))
 		gauges = append(gauges, g)
 	}
-	gaugeMutex.Unlock()
+
+	mutex.Unlock()
 
 	return g
 }
 
 // MustPlaceCounter registers a new Counter if name hasn't been used before.
-// The function panics when name does not match [a-zA-Z_:][a-zA-Z0-9_:]*
-// or when name is already in use as another metric type.
+// The function panics when name is in use as onther metric type or when
+// name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
 func MustPlaceCounter(name string) *Counter {
 	mustValidName(name)
 
-	head := make([]byte, 17+2*len(name))
-	copy(head, typePrefix)
-	copy(head[7:], name)
-	copy(head[7+len(name):], " counter\n")
-	copy(head[16+len(name):], name)
-	head[len(head)-1] = ' '
+	var head strings.Builder
+	head.Grow(17 + 2*len(name))
+	head.WriteString(typePrefix)
+	head.WriteString(name)
+	head.WriteString(" counter\n")
+	head.WriteString(name)
+	head.WriteByte(' ')
 
-	c := &Counter{head: head}
+	mutex.Lock()
 
-	counterMutex.Lock()
-	if i, ok := counterIndices[name]; ok {
-		c = counters[i]
+	var c *Counter
+	if index, ok := indices[name]; ok {
+		if int(index) >= len(counters) || counters[index].name() != name {
+			panic("metrics: name in use as another type")
+		}
+		c = counters[index]
 	} else {
-		counterIndices[name] = len(counters)
+		c = &Counter{head: head.String()}
+		indices[name] = uint32(len(counters))
 		counters = append(counters, c)
 	}
-	counterMutex.Unlock()
+
+	mutex.Unlock()
 
 	return c
 }
@@ -121,47 +134,57 @@ func mustValidName(s string) {
 
 // Help sets the text.
 func (g *Gauge) Help(text string) (this *Gauge) {
-	g.help = headHelp(g.head, text)
+	help(g.name(), text)
 	return g
 }
 
 // Help sets the text.
 func (c *Counter) Help(text string) (this *Counter) {
-	c.help = headHelp(c.head, text)
+	help(c.name(), text)
 	return c
 }
 
-func headHelp(head []byte, text string) []byte {
-	// get name from head
-	var name []byte
-	for i, c := range head {
-		if i > len(typePrefix) && c == ' ' {
-			name = head[len(typePrefix):i]
-			break
-		}
-	}
+var (
+	helpMutex   sync.RWMutex
+	helpIndices = make(map[string]uint32)
+	helps       [][]byte
+)
 
-	// compose help in new buffer
-	buf := make([]byte, len(helpPrefix)+len(name)+1, len(helpPrefix)+len(name)+len(text)+2)
-	copy(buf, helpPrefix)
-	copy(buf[len(helpPrefix):], name)
-	buf[len(helpPrefix)+len(name)] = ' '
+func help(name, text string) {
+	headLen := len(helpPrefix) + len(name) + 1
+	help := make([]byte, headLen, headLen+len(text)+1)
+
+	copy(help, helpPrefix)
+	copy(help[len(helpPrefix):], name)
+	help[headLen-1] = ' '
 
 	// add escaped text
+	var offset int
 	for i := 0; i < len(text); i++ {
-		c := text[i]
-		switch c {
+		switch c := text[i]; c {
 		case '\n':
-			buf = append(buf, '\\', 'n')
+			help = append(help, text[offset:i]...)
+			help = append(help, '\\', 'n')
+			offset = i + 1
 		case '\\':
-			buf = append(buf, '\\', '\\')
-		default:
-			buf = append(buf, c)
+			help = append(help, text[offset:i]...)
+			help = append(help, '\\', '\\')
+			offset = i + 1
 		}
 	}
+	help = append(help, text[offset:]...)
 
 	// terminate help line
-	return append(buf, '\n')
+	help = append(help, '\n')
+
+	helpMutex.Lock()
+	if i, ok := helpIndices[name]; ok {
+		helps[i] = help
+	} else {
+		helpIndices[name] = uint32(len(helps))
+		helps = append(helps, help)
+	}
+	helpMutex.Unlock()
 }
 
 var appendTimeTail = func(buf []byte) []byte {
@@ -170,7 +193,7 @@ var appendTimeTail = func(buf []byte) []byte {
 	return append(buf, '\n')
 }
 
-// HTTPHandler serves Prometheus on a /metrics endpoint.
+// HTTPHandler serves all metrics using a simple text-based exposition format.
 func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)
@@ -183,34 +206,39 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 
+	helpMutex.RLock()
+	for _, line := range helps {
+		w.Write(line)
+	}
+	helpMutex.RUnlock()
+
 	buf := make([]byte, 0, 4096)
 	timeTail := make([]byte, 1, 15)
 	timeTail[0] = ' '
 
-	gaugeMutex.Lock()
+	mutex.Lock()
 	gaugesView := gauges[:]
-	gaugeMutex.Unlock()
+	countersView := counters[:]
+	mutex.Unlock()
 
 	timeTail = appendTimeTail(timeTail)
 	for _, g := range gaugesView {
-		buf = g.appendSample(buf)
+		buf = append(buf, g.head...)
+		buf = strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
 		buf = append(buf, timeTail...)
-		if len(buf) > 3800 {
+		if len(buf) > 3900 {
 			w.Write(buf)
 			buf = buf[:0]
 			timeTail = appendTimeTail(timeTail[:1])
 		}
 	}
 
-	counterMutex.Lock()
-	countersView := counters[:]
-	counterMutex.Unlock()
-
 	timeTail = appendTimeTail(timeTail[:1])
 	for _, c := range countersView {
-		buf = c.appendSample(buf)
+		buf = append(buf, c.head...)
+		buf = strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
 		buf = append(buf, timeTail...)
-		if len(buf) > 3800 {
+		if len(buf) > 3900 {
 			w.Write(buf)
 			buf = buf[:0]
 			timeTail = appendTimeTail(timeTail[:1])
@@ -218,18 +246,4 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(buf)
-}
-
-// AppendSample applies the line format, open-ended.
-func (g *Gauge) appendSample(buf []byte) []byte {
-	buf = append(buf, g.help...)
-	buf = append(buf, g.head...)
-	return strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
-}
-
-// AppendSample applies the line format, open-ended.
-func (c *Counter) appendSample(buf []byte) []byte {
-	buf = append(buf, c.help...)
-	buf = append(buf, c.head...)
-	return strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
 }
