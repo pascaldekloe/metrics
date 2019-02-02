@@ -204,7 +204,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
 
 	helpMutex.RLock()
 	for _, line := range helps {

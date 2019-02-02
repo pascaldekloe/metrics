@@ -40,6 +40,8 @@ func TestSerialize(t *testing.T) {
 		t.Errorf("malformed content type %q: %s", contentType, err)
 	} else if media != "text/plain" {
 		t.Errorf("got content type %q, want plain text", contentType)
+	} else if params["version"] != "0.0.4" {
+		t.Errorf("got content type %q, want version 0.0.4", contentType)
 	} else if params["charset"] != "UTF-8" {
 		t.Errorf("got content type %q, want UTF-8 charset", contentType)
 	}
