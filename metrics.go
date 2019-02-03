@@ -13,10 +13,12 @@ import (
 
 // Special Comments
 const (
-	helpPrefix      = "# HELP "
-	typePrefix      = "# TYPE "
+	helpPrefix = "# HELP "
+	typePrefix = "# TYPE "
+
 	gaugeTypeTail   = " gauge\n"
 	counterTypeTail = " counter\n"
+	untypedTypeTail = " untiped\n"
 )
 
 // Gauge is a metric that represents a single numerical value that can
@@ -28,7 +30,6 @@ type Gauge struct {
 }
 
 // RealGauge is a Gauge, but for real numbers instead of integers.
-// arbitrarily go up and down.
 type RealGauge struct {
 	value uint64
 	head  string
@@ -65,10 +66,14 @@ func (g *Gauge) Add(summand int64) {
 // Add sets the value to the sum of the current value and summand.
 // Multiple goroutines may invoke this method simultaneously.
 func (g *RealGauge) Add(summand float64) {
+	add(&g.value, summand)
+}
+
+func add(p *uint64, summand float64) {
 	for {
-		current := atomic.LoadUint64(&g.value)
+		current := atomic.LoadUint64(p)
 		update := math.Float64bits(math.Float64frombits(current) + summand)
-		if atomic.CompareAndSwapUint64(&g.value, current, update) {
+		if atomic.CompareAndSwapUint64(p, current, update) {
 			return
 		}
 	}
@@ -289,18 +294,21 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	helpMutex.RUnlock()
 
 	buf := make([]byte, 0, 4096)
+
 	timeTail := make([]byte, 1, 15)
 	timeTail[0] = ' '
 
+	// snapshot
+
 	mutex.Lock()
-	gaugesView := gauges[:]
-	realGaugesView := realGauges[:]
-	countersView := counters[:]
+	gaugeView := gauges[:]
+	realGaugeView := realGauges[:]
+	counterView := counters[:]
 	mutex.Unlock()
 
 	timeTail = appendTimeTail(timeTail)
 
-	for _, g := range gaugesView {
+	for _, g := range gaugeView {
 		buf = append(buf, g.head...)
 		buf = strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
 		buf = append(buf, timeTail...)
@@ -311,7 +319,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, g := range realGaugesView {
+	for _, g := range realGaugeView {
 		buf = append(buf, g.head...)
 		buf = strconv.AppendFloat(buf, math.Float64frombits(atomic.LoadUint64(&g.value)), 'g', -1, 64)
 		buf = append(buf, timeTail...)
@@ -322,7 +330,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, c := range countersView {
+	for _, c := range counterView {
 		buf = append(buf, c.head...)
 		buf = strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
 		buf = append(buf, timeTail...)
@@ -330,6 +338,87 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(buf)
 			buf = buf[:0]
 			timeTail = appendTimeTail(timeTail[:1])
+		}
+	}
+
+	// Labeled Metrics
+
+	labeledMutex.Lock()
+	labeledView := labeleds
+	labeledMutex.Unlock()
+
+	if len(labeledView) == 0 {
+		w.Write(buf)
+		return
+	}
+
+	// collect written names
+	done := make(map[string]struct{}, len(gaugeView)+len(counterView))
+	for _, g := range gaugeView {
+		done[g.name()] = struct{}{}
+	}
+	for _, g := range realGaugeView {
+		done[g.name()] = struct{}{}
+	}
+	for _, c := range counterView {
+		done[c.name()] = struct{}{}
+	}
+
+	for _, l := range labeledView {
+		if _, ok := done[l.name]; !ok {
+			// print type comment
+			buf = append(buf, typePrefix...)
+			buf = append(buf, l.name...)
+			switch {
+			case len(l.gauge1s) != 0 || len(l.gauge2s) != 0 || len(l.gauge3s) != 0:
+				buf = append(buf, gaugeTypeTail...)
+			default:
+				buf = append(buf, untypedTypeTail...)
+			}
+		}
+
+		// print all samples
+		for _, l1 := range l.gauge1s {
+			for i, labelMap := range l1.labelSerials {
+				if len(buf) > cap(buf)/2 {
+					w.Write(buf)
+					buf = buf[:0]
+					timeTail = appendTimeTail(timeTail[:1])
+				}
+				buf = append(buf, l.name...)
+				buf = append(buf, labelMap...)
+				value := math.Float64frombits(atomic.LoadUint64(&l1.floatBits[i]))
+				buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
+				buf = append(buf, timeTail...)
+			}
+		}
+		for _, l2 := range l.gauge2s {
+			for i, labelMap := range l2.labelSerials {
+				if len(buf) > cap(buf)/2 {
+					w.Write(buf)
+					buf = buf[:0]
+					timeTail = appendTimeTail(timeTail[:1])
+				}
+				buf = append(buf, l.name...)
+				buf = append(buf, labelMap...)
+				value := math.Float64frombits(atomic.LoadUint64(&l2.floatBits[i]))
+				buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
+				buf = append(buf, timeTail...)
+			}
+		}
+		for _, l3 := range l.gauge3s {
+			for i, labelMap := range l3.labelSerials {
+				if len(buf) > cap(buf)/2 {
+					w.Write(buf)
+					buf = buf[:0]
+					timeTail = appendTimeTail(timeTail[:1])
+				}
+				buf = append(buf, l.name...)
+				buf = append(buf, labelMap...)
+				value := math.Float64frombits(atomic.LoadUint64(&l3.floatBits[i]))
+				buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
+				buf = append(buf, timeTail...)
+			}
 		}
 	}
 

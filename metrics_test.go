@@ -12,7 +12,11 @@ import (
 func reset() {
 	indices = make(map[string]uint32)
 	gauges = nil
+	realGauges = nil
 	counters = nil
+	labeleds = nil
+	helpIndices = make(map[string]uint32)
+	helps = nil
 }
 
 func TestSerialize(t *testing.T) {
