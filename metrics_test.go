@@ -96,36 +96,78 @@ func BenchmarkHelp(b *testing.B) {
 	}
 }
 
+func BenchmarkParallelAdd(b *testing.B) {
+	defer reset()
+
+	b.Run("integer", func(b *testing.B) {
+		b.ReportAllocs()
+
+		g := MustPlaceGauge("bench_label_unit")
+		b.RunParallel(func(pb *testing.PB) {
+			for i := int64(0); pb.Next(); i++ {
+				g.Add(i)
+			}
+		})
+	})
+
+	values := [...]string{"first", "second", "third", "fourth", "fifth"}
+
+	b.Run("label2x5", func(b *testing.B) {
+		b.ReportAllocs()
+
+		g := MustPlaceRealGauge2("bench_label_unit", "label", "more")
+		b.RunParallel(func(pb *testing.PB) {
+			for i := 0; pb.Next(); i++ {
+				g.Add(float64(i), values[i%2], values[i%5])
+			}
+		})
+	})
+}
+
 type voidResponseWriter http.Header
 
 func (void voidResponseWriter) Header() http.Header    { return http.Header(void) }
 func (voidResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
 func (voidResponseWriter) WriteHeader(statusCode int)  {}
 
-func BenchmarkHTTPHandler(b *testing.B) {
-	defer reset()
-
-	seedN := func(n int) {
-		for i := n / 2; i > 0; i-- {
-			MustPlaceGauge("some_arbitrary_test_unit" + strconv.Itoa(i)).Set(int64(i))
-		}
-		for i := n / 2; i > 0; i-- {
-			MustPlaceCounter("some_arbitrary_count" + strconv.Itoa(i)).Add(uint64(i))
-		}
-	}
+func benchmarkHTTPHandler(b *testing.B) {
+	b.ReportAllocs()
 
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	resp := voidResponseWriter{}
+	for i := 0; i < b.N; i++ {
+		HTTPHandler(resp, req)
+	}
+}
 
-	for _, n := range []int{0, 32, 1024, 32768} {
-		seedN(n)
+func BenchmarkHTTPHandler(b *testing.B) {
+	defer reset()
 
-		b.Run(strconv.Itoa(n)+"-metrics", func(b *testing.B) {
-			b.ReportAllocs()
-
-			for i := 0; i < b.N; i++ {
-				HTTPHandler(resp, req)
+	for _, n := range []int{32, 1024, 32768} {
+		b.Run(strconv.Itoa(n), func(b *testing.B) {
+			reset()
+			for i := n; i > 0; i-- {
+				MustPlaceGauge("integer" + strconv.Itoa(i) + "_bench_unit").Set(int64(i))
 			}
+			b.Run("integer", benchmarkHTTPHandler)
+
+			reset()
+			for i := n; i > 0; i-- {
+				MustPlaceRealGauge("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
+			}
+			b.Run("real", benchmarkHTTPHandler)
+
+			reset()
+			for i := n; i > 0; i-- {
+				MustPlaceRealGauge1("real"+strconv.Itoa(i)+"_label_bench_unit", "first").Set(float64(i), strconv.Itoa(i%5))
+			}
+			b.Run("label5", benchmarkHTTPHandler)
+
+			reset()
+			for i := n; i > 0; i-- {
+				MustPlaceRealGauge3("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").Set(float64(i), strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5))
+			}
+			b.Run("label2x3x5", benchmarkHTTPHandler)
 		})
 	}
 }
