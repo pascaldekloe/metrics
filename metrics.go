@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+// SkipTimestamp controls inclusion with sample production.
+var SkipTimestamp bool
+
 // Special Comments
 const (
 	helpPrefix = "# HELP "
@@ -256,10 +259,19 @@ func help(name, text string) {
 	helpMutex.Unlock()
 }
 
-var appendTimeTail = func(buf []byte) []byte {
-	ms := time.Now().UnixNano() / 1e6
-	buf = strconv.AppendInt(buf, ms, 10)
-	return append(buf, '\n')
+func sampleTail(buf []byte) []byte {
+	buf = buf[:1]
+
+	if SkipTimestamp {
+		buf[0] = '\n'
+	} else {
+		buf[0] = ' '
+		ms := time.Now().UnixNano() / 1e6
+		buf = strconv.AppendInt(buf, ms, 10)
+		buf = append(buf, '\n')
+	}
+
+	return buf
 }
 
 // HTTPHandler serves all metrics using a simple text-based exposition format.
@@ -283,10 +295,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	buf := make([]byte, 0, 4096)
 
-	timeTail := make([]byte, 1, 15)
-	timeTail[0] = ' '
-
-	// snapshot
+	// Snapshot
 
 	mutex.Lock()
 	gaugeView := gauges[:]
@@ -294,18 +303,18 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	counterView := counters[:]
 	mutex.Unlock()
 
-	timeTail = appendTimeTail(timeTail)
+	tail := sampleTail(make([]byte, 15))
 
 	for _, g := range gaugeView {
-		buf, timeTail = g.sample(w, buf, timeTail)
+		buf, tail = g.sample(w, buf, tail)
 	}
 
 	for _, g := range realGaugeView {
-		buf, timeTail = g.sample(w, buf, timeTail)
+		buf, tail = g.sample(w, buf, tail)
 	}
 
 	for _, c := range counterView {
-		buf, timeTail = c.sample(w, buf, timeTail)
+		buf, tail = c.sample(w, buf, tail)
 	}
 
 	// Labeled Metrics
@@ -331,6 +340,9 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 		done[c.name] = struct{}{}
 	}
 
+	// refresh timestamp
+	tail = sampleTail(tail)
+
 	for _, l := range labeledView {
 		if _, ok := done[l.name]; !ok {
 			// print type comment
@@ -347,17 +359,17 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 		// print all samples
 		for _, l1 := range l.gauge1s {
 			for _, g := range l1.gauges {
-				buf, timeTail = g.sample(w, buf, timeTail)
+				buf, tail = g.sample(w, buf, tail)
 			}
 		}
 		for _, l2 := range l.gauge2s {
 			for _, g := range l2.gauges {
-				buf, timeTail = g.sample(w, buf, timeTail)
+				buf, tail = g.sample(w, buf, tail)
 			}
 		}
 		for _, l3 := range l.gauge3s {
 			for _, g := range l3.gauges {
-				buf, timeTail = g.sample(w, buf, timeTail)
+				buf, tail = g.sample(w, buf, tail)
 			}
 		}
 	}
@@ -365,39 +377,39 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf)
 }
 
-func (g *Gauge) sample(w http.ResponseWriter, buf, timeTail []byte) ([]byte, []byte) {
+func (g *Gauge) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte) {
 	buf = append(buf, g.head...)
 	buf = strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
-	buf = append(buf, timeTail...)
+	buf = append(buf, tail...)
 	if len(buf) > 3900 {
 		w.Write(buf)
 		buf = buf[:0]
-		timeTail = appendTimeTail(timeTail[:1])
+		tail = sampleTail(tail)
 	}
-	return buf, timeTail
+	return buf, tail
 }
 
-func (g *RealGauge) sample(w http.ResponseWriter, buf, timeTail []byte) ([]byte, []byte) {
+func (g *RealGauge) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte) {
 	if len(buf) > 3900 {
 		w.Write(buf)
 		buf = buf[:0]
-		timeTail = appendTimeTail(timeTail[:1])
+		tail = sampleTail(tail)
 	}
 	buf = append(buf, g.head...)
 	value := math.Float64frombits(atomic.LoadUint64(&g.value))
 	buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
-	buf = append(buf, timeTail...)
-	return buf, timeTail
+	buf = append(buf, tail...)
+	return buf, tail
 }
 
-func (c *Counter) sample(w http.ResponseWriter, buf, timeTail []byte) ([]byte, []byte) {
+func (c *Counter) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte) {
 	buf = append(buf, c.head...)
 	buf = strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
-	buf = append(buf, timeTail...)
+	buf = append(buf, tail...)
 	if len(buf) > 3900 {
 		w.Write(buf)
 		buf = buf[:0]
-		timeTail = appendTimeTail(timeTail[:1])
+		tail = sampleTail(tail)
 	}
-	return buf, timeTail
+	return buf, tail
 }

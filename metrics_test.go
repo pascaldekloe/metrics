@@ -10,26 +10,23 @@ import (
 )
 
 func reset() {
+	SkipTimestamp = false
+
 	indices = make(map[string]uint32)
 	gauges = nil
 	realGauges = nil
 	counters = nil
+
+	labeledIndices = make(map[string]uint32)
 	labeleds = nil
+
 	helpIndices = make(map[string]uint32)
 	helps = nil
 }
 
 func TestSerialize(t *testing.T) {
-	// mockup
-	backup := appendTimeTail
-	appendTimeTail = func(buf []byte) []byte {
-		return append(buf, "1548759822954\n"...)
-	}
-	defer func() {
-		appendTimeTail = backup
-
-		reset()
-	}()
+	defer reset()
+	SkipTimestamp = true
 
 	MustPlaceGauge("g1").Help("🆘")
 	MustPlaceGauge("g1").Set(42)
@@ -53,9 +50,9 @@ func TestSerialize(t *testing.T) {
 	const want = `# HELP g1 🆘
 # HELP c1 escape\n… and \\
 # TYPE g1 gauge
-g1 42 1548759822954
+g1 42
 # TYPE c1 counter
-c1 9 1548759822954
+c1 9
 `
 	if got := rec.Body.String(); got != want {
 		t.Errorf("got %q", got)
