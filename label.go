@@ -1,141 +1,133 @@
 package metrics
 
 import (
-	"math"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 // RealGauge1 is a RealGauge with a fixed label.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type RealGauge1 struct {
-	labelKey string
-
-	mutex        sync.Mutex
-	labelValues  []string
-	labelSerials []string
-	floatBits    []uint64
+	name        string
+	mutex       sync.Mutex
+	labelKey    string
+	labelValues []string
+	gauges      []*RealGauge
 }
 
-// RealGauge2 is a RealGauge with 2 fixed labelKeys.
+// RealGauge2 is a RealGauge with 2 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type RealGauge2 struct {
-	labelKeys [2]string
-
-	mutex        sync.Mutex
-	labelValues  []*[2]string
-	labelSerials []string
-	floatBits    []uint64
+	name        string
+	mutex       sync.Mutex
+	labelKeys   [2]string
+	labelValues []*[2]string
+	gauges      []*RealGauge
 }
 
-// RealGauge3 is a RealGauge with 3 fixed labelKeys.
+// RealGauge3 is a RealGauge with 3 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type RealGauge3 struct {
-	labelKeys [3]string
-
-	mutex        sync.Mutex
-	labelValues  []*[3]string
-	labelSerials []string
-	floatBits    []uint64
+	name        string
+	mutex       sync.Mutex
+	labelKeys   [3]string
+	labelValues []*[3]string
+	gauges      []*RealGauge
 }
 
-func (g *RealGauge1) getOrAdd(label string) *uint64 {
+func (g *RealGauge1) forLabel(label string) *RealGauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
 		if combo == label {
 			g.mutex.Unlock()
 
-			return &g.floatBits[i]
+			return g.gauges[i]
 		}
 	}
 
 	g.labelValues = append(g.labelValues, label)
-	g.labelSerials = append(g.labelSerials, formatLabel1(g.labelKey, label))
-	i := len(g.floatBits)
-	g.floatBits = append(g.floatBits, 0)
+	entry := &RealGauge{name: g.name, head: formatHead1(g.name, g.labelKey, label)}
+	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
 
-	return &g.floatBits[i]
+	return entry
 }
 
-func (g *RealGauge2) getOrAdd(label1, label2 string) *uint64 {
+func (g *RealGauge2) forLabels(label1, label2 string) *RealGauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
 		if combo[0] == label1 && combo[1] == label2 {
 			g.mutex.Unlock()
 
-			return &g.floatBits[i]
+			return g.gauges[i]
 		}
 	}
 
 	combo := [2]string{label1, label2}
+	entry := &RealGauge{name: g.name, head: formatHead2(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
-	g.labelSerials = append(g.labelSerials, formatLabel2(&g.labelKeys, &combo))
-	i := len(g.floatBits)
-	g.floatBits = append(g.floatBits, 0)
+	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
 
-	return &g.floatBits[i]
+	return entry
 }
 
-func (g *RealGauge3) getOrAdd(label1, label2, label3 string) *uint64 {
+func (g *RealGauge3) forLabels(label1, label2, label3 string) *RealGauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
 		if combo[0] == label1 && combo[1] == label2 && combo[2] == label3 {
 			g.mutex.Unlock()
 
-			return &g.floatBits[i]
+			return g.gauges[i]
 		}
 	}
 
 	combo := [3]string{label1, label2, label3}
+	entry := &RealGauge{name: g.name, head: formatHead3(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
-	g.labelSerials = append(g.labelSerials, formatLabel3(&g.labelKeys, &combo))
-	i := len(g.floatBits)
-	g.floatBits = append(g.floatBits, 0)
+	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
 
-	return &g.floatBits[i]
+	return entry
 }
 
 // Add is like RealGauge.Add, with the addition of a label value.
 func (g *RealGauge1) Add(summand float64, label string) {
-	add(g.getOrAdd(label), summand)
+	g.forLabel(label).Add(summand)
 }
 
 // Add is like RealGauge.Add, with the addition of 2 label values.
 func (g *RealGauge2) Add(summand float64, label1, label2 string) {
-	add(g.getOrAdd(label1, label2), summand)
+	g.forLabels(label1, label2).Add(summand)
 }
 
 // Add is like RealGauge.Add, with the addition of 3 label values.
 func (g *RealGauge3) Add(summand float64, label1, label2, label3 string) {
-	add(g.getOrAdd(label1, label2, label3), summand)
+	g.forLabels(label1, label2, label3).Add(summand)
 }
 
 // Set is like RealGauge.Set, with the addition of a label value.
 func (g *RealGauge1) Set(update float64, label string) {
-	atomic.StoreUint64(g.getOrAdd(label), math.Float64bits(update))
+	g.forLabel(label).Set(update)
 }
 
 // Set is like RealGauge.Set, with the addition of 2 label values.
 func (g *RealGauge2) Set(update float64, label1, label2 string) {
-	atomic.StoreUint64(g.getOrAdd(label1, label2), math.Float64bits(update))
+	g.forLabels(label1, label2).Set(update)
 }
 
 // Set is like RealGauge.Set, with the addition of 3 label values.
 func (g *RealGauge3) Set(update float64, label1, label2, label3 string) {
-	atomic.StoreUint64(g.getOrAdd(label1, label2, label3), math.Float64bits(update))
+	g.forLabels(label1, label2, label3).Set(update)
 }
 
 type labeled struct {
@@ -181,7 +173,7 @@ func MustPlaceRealGauge1(name, key string) *RealGauge1 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge1{labelKey: key}
+		entry = &RealGauge1{name: name, labelKey: key}
 		l.gauge1s = append(l.gauge1s, entry)
 	}
 
@@ -225,9 +217,7 @@ func MustPlaceRealGauge2(name, key1, key2 string) *RealGauge2 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge2{
-			labelKeys: [...]string{key1, key2},
-		}
+		entry = &RealGauge2{name: name, labelKeys: [...]string{key1, key2}}
 		l.gauge2s = append(l.gauge2s, entry)
 	}
 
@@ -272,9 +262,7 @@ func MustPlaceRealGauge3(name, key1, key2, key3 string) *RealGauge3 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge3{
-			labelKeys: [...]string{key1, key2, key3},
-		}
+		entry = &RealGauge3{name: name, labelKeys: [...]string{key1, key2, key3}}
 		l.gauge3s = append(l.gauge3s, entry)
 	}
 
@@ -295,55 +283,57 @@ func mustValidKey(s string) {
 	}
 }
 
-// LabelValue escapes the special characters.
-var labelValue = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
+var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func formatLabel1(key, value string) string {
+func formatHead1(name, key, value string) string {
 	var buf strings.Builder
-	buf.Grow(6 + len(key) + len(value))
+	buf.Grow(6 + len(name) + len(key) + len(value))
 
+	buf.WriteString(name)
 	buf.WriteByte('{')
 	buf.WriteString(key)
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, value)
+	valueEscapes.WriteString(&buf, value)
 	buf.WriteString(`"} `)
 
 	return buf.String()
 }
 
-func formatLabel2(keys, values *[2]string) string {
+func formatHead2(name string, keys, values *[2]string) string {
 	var buf strings.Builder
-	buf.Grow(10 + len(keys[0]) + len(keys[1]) + len(values[0]) + len(values[1]))
+	buf.Grow(10 + len(name) + len(keys[0]) + len(keys[1]) + len(values[0]) + len(values[1]))
 
+	buf.WriteString(name)
 	buf.WriteByte('{')
 	buf.WriteString(keys[0])
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, values[0])
+	valueEscapes.WriteString(&buf, values[0])
 	buf.WriteString(`",`)
 	buf.WriteString(keys[1])
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, values[1])
+	valueEscapes.WriteString(&buf, values[1])
 	buf.WriteString(`"} `)
 
 	return buf.String()
 }
 
-func formatLabel3(keys, values *[3]string) string {
+func formatHead3(name string, keys, values *[3]string) string {
 	var buf strings.Builder
-	buf.Grow(14 + len(keys[0]) + len(keys[1]) + len(keys[2]) + len(values[0]) + len(values[1]) + len(values[2]))
+	buf.Grow(14 + len(name) + len(keys[0]) + len(keys[1]) + len(keys[2]) + len(values[0]) + len(values[1]) + len(values[2]))
 
+	buf.WriteString(name)
 	buf.WriteByte('{')
 	buf.WriteString(keys[0])
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, values[0])
+	valueEscapes.WriteString(&buf, values[0])
 	buf.WriteString(`",`)
 	buf.WriteString(keys[1])
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, values[1])
+	valueEscapes.WriteString(&buf, values[1])
 	buf.WriteString(`",`)
 	buf.WriteString(keys[2])
 	buf.WriteString(`="`)
-	labelValue.WriteString(&buf, values[2])
+	valueEscapes.WriteString(&buf, values[2])
 	buf.WriteString(`"} `)
 
 	return buf.String()
