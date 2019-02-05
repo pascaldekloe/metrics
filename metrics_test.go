@@ -90,6 +90,34 @@ func BenchmarkHelp(b *testing.B) {
 	}
 }
 
+func BenchmarkParallelSet(b *testing.B) {
+	defer reset()
+
+	b.Run("real", func(b *testing.B) {
+		b.ReportAllocs()
+
+		c := MustPlaceGauge("bench_real_unit")
+		b.RunParallel(func(pb *testing.PB) {
+			for i := 0; pb.Next(); i++ {
+				c.Set(float64(i))
+			}
+		})
+	})
+
+	values := [...]string{"first", "second", "third", "fourth", "fifth"}
+
+	b.Run("label2x5", func(b *testing.B) {
+		b.ReportAllocs()
+
+		g := MustPlaceGaugeLabel2("bench_label_unit", "label", "more")
+		b.RunParallel(func(pb *testing.PB) {
+			for i := 0; pb.Next(); i++ {
+				g.ForLabels(values[i%2], values[i%5]).Set(float64(i))
+			}
+		})
+	})
+}
+
 func BenchmarkParallelAdd(b *testing.B) {
 	defer reset()
 
