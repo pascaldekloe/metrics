@@ -13,24 +13,19 @@ func reset() {
 	SkipTimestamp = false
 
 	indices = make(map[string]uint32)
-	gauges = nil
-	counters = nil
-
-	labeledIndices = make(map[string]uint32)
-	labeleds = nil
-
-	helpIndices = make(map[string]uint32)
-	helps = nil
+	metrics = nil
 }
 
 func TestSerialize(t *testing.T) {
 	defer reset()
 	SkipTimestamp = true
 
-	MustPlaceGauge("g1").Help("🆘")
 	MustPlaceGauge("g1").Set(42)
-	MustPlaceCounter("c1").Help("override first 1").Add(1)
-	MustPlaceCounter("c1").Help("escape\n… and \\").Add(8)
+	MustPlaceCounter("c1").Add(1)
+	MustPlaceCounter("c1").Add(8)
+	MustHelp("g1", "🆘")
+	MustHelp("c1", "override first 1")
+	MustHelp("c1", "escape\n… and \\")
 
 	rec := httptest.NewRecorder()
 	HTTPHandler(rec, httptest.NewRequest("GET", "/metrics", nil))
@@ -46,11 +41,11 @@ func TestSerialize(t *testing.T) {
 		t.Errorf("got content type %q, want UTF-8 charset", contentType)
 	}
 
-	const want = `# HELP g1 🆘
-# HELP c1 escape\n… and \\
-# TYPE g1 gauge
+	const want = `# TYPE g1 gauge
+# HELP g1 🆘
 g1 42
 # TYPE c1 counter
+# HELP c1 escape\n… and \\
 c1 9
 `
 	if got := rec.Body.String(); got != want {
@@ -89,9 +84,9 @@ func BenchmarkHelp(b *testing.B) {
 
 	b.ReportAllocs()
 
-	g := MustPlaceGauge("some_arbitrary_test_unit")
+	MustPlaceGauge("some_arbitrary_test_unit")
 	for i := 0; i < b.N; i++ {
-		g.Help("some arbitrary test text")
+		MustHelp("some_arbitrary_test_unit", "some arbitrary test text")
 	}
 }
 
@@ -101,10 +96,21 @@ func BenchmarkParallelAdd(b *testing.B) {
 	b.Run("integer", func(b *testing.B) {
 		b.ReportAllocs()
 
-		c := MustPlaceCounter("bench_label_unit")
+		c := MustPlaceCounter("bench_integer_unit")
 		b.RunParallel(func(pb *testing.PB) {
 			for i := uint64(0); pb.Next(); i++ {
 				c.Add(i)
+			}
+		})
+	})
+
+	b.Run("real", func(b *testing.B) {
+		b.ReportAllocs()
+
+		c := MustPlaceGauge("bench_real_unit")
+		b.RunParallel(func(pb *testing.PB) {
+			for i := 0; pb.Next(); i++ {
+				c.Add(float64(i))
 			}
 		})
 	})

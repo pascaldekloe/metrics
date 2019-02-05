@@ -50,7 +50,7 @@ func (g *GaugeLabel1) forLabel(label string) *Gauge {
 	}
 
 	g.labelValues = append(g.labelValues, label)
-	entry := &Gauge{name: g.name, head: formatHead1(g.name, g.labelKey, label)}
+	entry := &Gauge{label: formatLabel1(g.name, g.labelKey, label)}
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
@@ -70,7 +70,7 @@ func (g *GaugeLabel2) forLabels(label1, label2 string) *Gauge {
 	}
 
 	combo := [2]string{label1, label2}
-	entry := &Gauge{name: g.name, head: formatHead2(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{label: formatLabel2(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -91,7 +91,7 @@ func (g *GaugeLabel3) forLabels(label1, label2, label3 string) *Gauge {
 	}
 
 	combo := [3]string{label1, label2, label3}
-	entry := &Gauge{name: g.name, head: formatHead3(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{label: formatLabel3(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -130,63 +130,60 @@ func (g *GaugeLabel3) Set(update float64, label1, label2, label3 string) {
 	g.forLabels(label1, label2, label3).Set(update)
 }
 
-type labeled struct {
-	name    string
-	gauge1s []*GaugeLabel1
-	gauge2s []*GaugeLabel2
-	gauge3s []*GaugeLabel3
-}
-
-var (
-	labeledMutex   sync.Mutex
-	labeledIndices = make(map[string]uint32)
-	labeleds       []*labeled
-)
-
 // MustPlaceGaugeLabel1 registers a new GaugeLabel1 if the label key has not
-// been used before on name. The function panics when name does not match
-// regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when the label key does
-// not match regular expression [a-zA-Z_][a-zA-Z0-9_]*.
+// been used before on name.
+//
+// The function panics on any of the following:
+//	* name in use as another metric type
+//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
+//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
 func MustPlaceGaugeLabel1(name, key string) *GaugeLabel1 {
 	mustValidName(name)
 	mustValidKey(key)
 
-	labeledMutex.Lock()
+	mutex.Lock()
 
-	var l *labeled
-	if index, ok := labeledIndices[name]; ok {
-		l = labeleds[index]
-		if len(l.gauge1s) == 0 && len(l.gauge2s) == 0 && len(l.gauge3s) == 0 {
+	var g *GaugeLabel1
+	if index, ok := indices[name]; !ok {
+		g = &GaugeLabel1{name: name, labelKey: key}
+
+		indices[name] = uint32(len(metrics))
+		metrics = append(metrics, &metric{
+			typeComment: typePrefix + name + gaugeLineEnd,
+			typeID:      gaugeType,
+			gaugeL1s:    []*GaugeLabel1{g},
+		})
+	} else {
+		m := metrics[index]
+		if m.typeID != gaugeType {
 			panic("metrics: name in use as another type")
 		}
-	} else {
-		l = &labeled{name: name}
-		labeledIndices[name] = uint32(len(labeleds))
-		labeleds = append(labeleds, l)
-	}
 
-	var entry *GaugeLabel1
-	for _, l1 := range l.gauge1s {
-		if l1.labelKey == key {
-			entry = l1
-			break
+		for _, l1 := range m.gaugeL1s {
+			if l1.labelKey == key {
+				g = l1
+				break
+			}
+		}
+		if g == nil {
+			g = &GaugeLabel1{name: name, labelKey: key}
+			m.gaugeL1s = append(m.gaugeL1s, g)
 		}
 	}
-	if entry == nil {
-		entry = &GaugeLabel1{name: name, labelKey: key}
-		l.gauge1s = append(l.gauge1s, entry)
-	}
 
-	labeledMutex.Unlock()
+	mutex.Unlock()
 
-	return entry
+	return g
 }
 
 // MustPlaceGaugeLabel2 registers a new GaugeLabel2 if the label keys have
-// not been used before on name. The function panics when name does not match
-// regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when a label key does not match
-// regular expression [a-zA-Z_][a-zA-Z0-9_]* or when the label keys do not appear
-// in sorted order.
+// not been used before on name.
+//
+// The function panics on any of the following:
+//	* name in use as another metric type
+//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
+//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+//	* label keys do not appear in ascending order
 func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 	mustValidName(name)
 	mustValidKey(key1)
@@ -195,42 +192,49 @@ func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 		panic("metrics: label key arguments aren't sorted")
 	}
 
-	labeledMutex.Lock()
+	mutex.Lock()
 
-	var l *labeled
-	if index, ok := labeledIndices[name]; ok {
-		l = labeleds[index]
-		if len(l.gauge1s) == 0 && len(l.gauge2s) == 0 && len(l.gauge3s) == 0 {
+	var g *GaugeLabel2
+	if index, ok := indices[name]; !ok {
+		g = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
+
+		indices[name] = uint32(len(metrics))
+		metrics = append(metrics, &metric{
+			typeComment: typePrefix + name + gaugeLineEnd,
+			typeID:      gaugeType,
+			gaugeL2s:    []*GaugeLabel2{g},
+		})
+	} else {
+		m := metrics[index]
+		if m.typeID != gaugeType {
 			panic("metrics: name in use as another type")
 		}
-	} else {
-		l = &labeled{name: name}
-		labeledIndices[name] = uint32(len(labeleds))
-		labeleds = append(labeleds, l)
-	}
 
-	var entry *GaugeLabel2
-	for _, l2 := range l.gauge2s {
-		if l2.labelKeys[0] == key1 && l2.labelKeys[1] == key2 {
-			entry = l2
-			break
+		for _, l2 := range m.gaugeL2s {
+			if l2.labelKeys[0] == key1 && l2.labelKeys[1] == key2 {
+				g = l2
+				break
+			}
+		}
+		if g == nil {
+			g = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
+			m.gaugeL2s = append(m.gaugeL2s, g)
 		}
 	}
-	if entry == nil {
-		entry = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
-		l.gauge2s = append(l.gauge2s, entry)
-	}
 
-	labeledMutex.Unlock()
+	mutex.Unlock()
 
-	return entry
+	return g
 }
 
 // MustPlaceGaugeLabel3 registers a new GaugeLabel3 if the label keys have
-// not been used before on name. The function panics when name does not match
-// regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when a label key does not match
-// regular expression [a-zA-Z_][a-zA-Z0-9_]* or when the label keys do not appear
-// in sorted order.
+// not been used before on name.
+//
+// The function panics on any of the following:
+//	* name in use as another metric type
+//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
+//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+//	* label keys do not appear in ascending order.
 func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
 	mustValidName(name)
 	mustValidKey(key1)
@@ -240,35 +244,39 @@ func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
 		panic("metrics: label key arguments aren't sorted")
 	}
 
-	labeledMutex.Lock()
+	mutex.Lock()
 
-	var l *labeled
-	if index, ok := labeledIndices[name]; ok {
-		l = labeleds[index]
-		if len(l.gauge1s) == 0 && len(l.gauge2s) == 0 && len(l.gauge3s) == 0 {
+	var g *GaugeLabel3
+	if index, ok := indices[name]; !ok {
+		g = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
+
+		indices[name] = uint32(len(metrics))
+		metrics = append(metrics, &metric{
+			typeComment: typePrefix + name + gaugeLineEnd,
+			typeID:      gaugeType,
+			gaugeL3s:    []*GaugeLabel3{g},
+		})
+	} else {
+		m := metrics[index]
+		if m.typeID != gaugeType {
 			panic("metrics: name in use as another type")
 		}
-	} else {
-		l = &labeled{name: name}
-		labeledIndices[name] = uint32(len(labeleds))
-		labeleds = append(labeleds, l)
-	}
 
-	var entry *GaugeLabel3
-	for _, l3 := range l.gauge3s {
-		if l3.labelKeys[0] == key1 && l3.labelKeys[1] == key2 && l3.labelKeys[2] == key3 {
-			entry = l3
-			break
+		for _, l3 := range m.gaugeL3s {
+			if l3.labelKeys[0] == key1 && l3.labelKeys[1] == key2 && l3.labelKeys[2] == key3 {
+				g = l3
+				break
+			}
+		}
+		if g == nil {
+			g = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
+			m.gaugeL3s = append(m.gaugeL3s, g)
 		}
 	}
-	if entry == nil {
-		entry = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
-		l.gauge3s = append(l.gauge3s, entry)
-	}
 
-	labeledMutex.Unlock()
+	mutex.Unlock()
 
-	return entry
+	return g
 }
 
 func mustValidKey(s string) {
@@ -278,14 +286,14 @@ func mustValidKey(s string) {
 			continue
 		}
 		if i == 0 || c < '0' || c > '9' {
-			panic("metrics: key doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
+			panic("metrics: label key doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
 		}
 	}
 }
 
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func formatHead1(name, key, value string) string {
+func formatLabel1(name, key, value string) string {
 	var buf strings.Builder
 	buf.Grow(6 + len(name) + len(key) + len(value))
 
@@ -299,7 +307,7 @@ func formatHead1(name, key, value string) string {
 	return buf.String()
 }
 
-func formatHead2(name string, keys, values *[2]string) string {
+func formatLabel2(name string, keys, values *[2]string) string {
 	var buf strings.Builder
 	buf.Grow(10 + len(name) + len(keys[0]) + len(keys[1]) + len(values[0]) + len(values[1]))
 
@@ -317,7 +325,7 @@ func formatHead2(name string, keys, values *[2]string) string {
 	return buf.String()
 }
 
-func formatHead3(name string, keys, values *[3]string) string {
+func formatLabel3(name string, keys, values *[3]string) string {
 	var buf strings.Builder
 	buf.Grow(14 + len(name) + len(keys[0]) + len(keys[1]) + len(keys[2]) + len(values[0]) + len(values[1]) + len(values[2]))
 
