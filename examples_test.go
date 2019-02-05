@@ -8,13 +8,13 @@ import (
 )
 
 func Example_labeled() {
-	Thermostat := metrics.MustPlaceRealGauge("thermostat_celcius")
+	Thermostat := metrics.MustPlaceGauge("thermostat_celcius")
 	Thermostat.Set(20)
 
-	PerRoom := metrics.MustPlaceRealGauge1("thermostat_celcius", "room")
+	PerRoom := metrics.MustPlaceGaugeLabel1("thermostat_celcius", "room")
 	PerRoom.Set(19, "kitchen")
 
-	Station := metrics.MustPlaceRealGauge2("station_celcius", "city", "source")
+	Station := metrics.MustPlaceGaugeLabel2("station_celcius", "city", "source")
 	Station.Set(11.2, "Amsterdam (Schiphol)", "KNMI")
 	Station.Set(9.6, "London", "BBC")
 

@@ -5,40 +5,40 @@ import (
 	"sync"
 )
 
-// RealGauge1 is a RealGauge with a fixed label.
+// GaugeLabel1 is a Gauge with a fixed label.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type RealGauge1 struct {
+type GaugeLabel1 struct {
 	name        string
 	mutex       sync.Mutex
 	labelKey    string
 	labelValues []string
-	gauges      []*RealGauge
+	gauges      []*Gauge
 }
 
-// RealGauge2 is a RealGauge with 2 fixed labels.
+// GaugeLabel2 is a Gauge with 2 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type RealGauge2 struct {
+type GaugeLabel2 struct {
 	name        string
 	mutex       sync.Mutex
 	labelKeys   [2]string
 	labelValues []*[2]string
-	gauges      []*RealGauge
+	gauges      []*Gauge
 }
 
-// RealGauge3 is a RealGauge with 3 fixed labels.
+// GaugeLabel3 is a Gauge with 3 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type RealGauge3 struct {
+type GaugeLabel3 struct {
 	name        string
 	mutex       sync.Mutex
 	labelKeys   [3]string
 	labelValues []*[3]string
-	gauges      []*RealGauge
+	gauges      []*Gauge
 }
 
-func (g *RealGauge1) forLabel(label string) *RealGauge {
+func (g *GaugeLabel1) forLabel(label string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -50,7 +50,7 @@ func (g *RealGauge1) forLabel(label string) *RealGauge {
 	}
 
 	g.labelValues = append(g.labelValues, label)
-	entry := &RealGauge{name: g.name, head: formatHead1(g.name, g.labelKey, label)}
+	entry := &Gauge{name: g.name, head: formatHead1(g.name, g.labelKey, label)}
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
@@ -58,7 +58,7 @@ func (g *RealGauge1) forLabel(label string) *RealGauge {
 	return entry
 }
 
-func (g *RealGauge2) forLabels(label1, label2 string) *RealGauge {
+func (g *GaugeLabel2) forLabels(label1, label2 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -70,7 +70,7 @@ func (g *RealGauge2) forLabels(label1, label2 string) *RealGauge {
 	}
 
 	combo := [2]string{label1, label2}
-	entry := &RealGauge{name: g.name, head: formatHead2(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{name: g.name, head: formatHead2(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -79,7 +79,7 @@ func (g *RealGauge2) forLabels(label1, label2 string) *RealGauge {
 	return entry
 }
 
-func (g *RealGauge3) forLabels(label1, label2, label3 string) *RealGauge {
+func (g *GaugeLabel3) forLabels(label1, label2, label3 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -91,7 +91,7 @@ func (g *RealGauge3) forLabels(label1, label2, label3 string) *RealGauge {
 	}
 
 	combo := [3]string{label1, label2, label3}
-	entry := &RealGauge{name: g.name, head: formatHead3(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{name: g.name, head: formatHead3(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -100,41 +100,41 @@ func (g *RealGauge3) forLabels(label1, label2, label3 string) *RealGauge {
 	return entry
 }
 
-// Add is like RealGauge.Add, with the addition of a label value.
-func (g *RealGauge1) Add(summand float64, label string) {
+// Add is like Gauge.Add, with the addition of a label value.
+func (g *GaugeLabel1) Add(summand float64, label string) {
 	g.forLabel(label).Add(summand)
 }
 
-// Add is like RealGauge.Add, with the addition of 2 label values.
-func (g *RealGauge2) Add(summand float64, label1, label2 string) {
+// Add is like Gauge.Add, with the addition of 2 label values.
+func (g *GaugeLabel2) Add(summand float64, label1, label2 string) {
 	g.forLabels(label1, label2).Add(summand)
 }
 
-// Add is like RealGauge.Add, with the addition of 3 label values.
-func (g *RealGauge3) Add(summand float64, label1, label2, label3 string) {
+// Add is like Gauge.Add, with the addition of 3 label values.
+func (g *GaugeLabel3) Add(summand float64, label1, label2, label3 string) {
 	g.forLabels(label1, label2, label3).Add(summand)
 }
 
-// Set is like RealGauge.Set, with the addition of a label value.
-func (g *RealGauge1) Set(update float64, label string) {
+// Set is like Gauge.Set, with the addition of a label value.
+func (g *GaugeLabel1) Set(update float64, label string) {
 	g.forLabel(label).Set(update)
 }
 
-// Set is like RealGauge.Set, with the addition of 2 label values.
-func (g *RealGauge2) Set(update float64, label1, label2 string) {
+// Set is like Gauge.Set, with the addition of 2 label values.
+func (g *GaugeLabel2) Set(update float64, label1, label2 string) {
 	g.forLabels(label1, label2).Set(update)
 }
 
-// Set is like RealGauge.Set, with the addition of 3 label values.
-func (g *RealGauge3) Set(update float64, label1, label2, label3 string) {
+// Set is like Gauge.Set, with the addition of 3 label values.
+func (g *GaugeLabel3) Set(update float64, label1, label2, label3 string) {
 	g.forLabels(label1, label2, label3).Set(update)
 }
 
 type labeled struct {
 	name    string
-	gauge1s []*RealGauge1
-	gauge2s []*RealGauge2
-	gauge3s []*RealGauge3
+	gauge1s []*GaugeLabel1
+	gauge2s []*GaugeLabel2
+	gauge3s []*GaugeLabel3
 }
 
 var (
@@ -143,11 +143,11 @@ var (
 	labeleds       []*labeled
 )
 
-// MustPlaceRealGauge1 registers a new RealGauge1 if the label key has not
+// MustPlaceGaugeLabel1 registers a new GaugeLabel1 if the label key has not
 // been used before on name. The function panics when name does not match
 // regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when the label key does
 // not match regular expression [a-zA-Z_][a-zA-Z0-9_]*.
-func MustPlaceRealGauge1(name, key string) *RealGauge1 {
+func MustPlaceGaugeLabel1(name, key string) *GaugeLabel1 {
 	mustValidName(name)
 	mustValidKey(key)
 
@@ -165,7 +165,7 @@ func MustPlaceRealGauge1(name, key string) *RealGauge1 {
 		labeleds = append(labeleds, l)
 	}
 
-	var entry *RealGauge1
+	var entry *GaugeLabel1
 	for _, l1 := range l.gauge1s {
 		if l1.labelKey == key {
 			entry = l1
@@ -173,7 +173,7 @@ func MustPlaceRealGauge1(name, key string) *RealGauge1 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge1{name: name, labelKey: key}
+		entry = &GaugeLabel1{name: name, labelKey: key}
 		l.gauge1s = append(l.gauge1s, entry)
 	}
 
@@ -182,12 +182,12 @@ func MustPlaceRealGauge1(name, key string) *RealGauge1 {
 	return entry
 }
 
-// MustPlaceRealGauge2 registers a new RealGauge2 if the label keys have
+// MustPlaceGaugeLabel2 registers a new GaugeLabel2 if the label keys have
 // not been used before on name. The function panics when name does not match
 // regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when a label key does not match
 // regular expression [a-zA-Z_][a-zA-Z0-9_]* or when the label keys do not appear
 // in sorted order.
-func MustPlaceRealGauge2(name, key1, key2 string) *RealGauge2 {
+func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 	mustValidName(name)
 	mustValidKey(key1)
 	mustValidKey(key2)
@@ -209,7 +209,7 @@ func MustPlaceRealGauge2(name, key1, key2 string) *RealGauge2 {
 		labeleds = append(labeleds, l)
 	}
 
-	var entry *RealGauge2
+	var entry *GaugeLabel2
 	for _, l2 := range l.gauge2s {
 		if l2.labelKeys[0] == key1 && l2.labelKeys[1] == key2 {
 			entry = l2
@@ -217,7 +217,7 @@ func MustPlaceRealGauge2(name, key1, key2 string) *RealGauge2 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge2{name: name, labelKeys: [...]string{key1, key2}}
+		entry = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
 		l.gauge2s = append(l.gauge2s, entry)
 	}
 
@@ -226,12 +226,12 @@ func MustPlaceRealGauge2(name, key1, key2 string) *RealGauge2 {
 	return entry
 }
 
-// MustPlaceRealGauge3 registers a new RealGauge3 if the label keys have
+// MustPlaceGaugeLabel3 registers a new GaugeLabel3 if the label keys have
 // not been used before on name. The function panics when name does not match
 // regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or when a label key does not match
 // regular expression [a-zA-Z_][a-zA-Z0-9_]* or when the label keys do not appear
 // in sorted order.
-func MustPlaceRealGauge3(name, key1, key2, key3 string) *RealGauge3 {
+func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
 	mustValidName(name)
 	mustValidKey(key1)
 	mustValidKey(key2)
@@ -254,7 +254,7 @@ func MustPlaceRealGauge3(name, key1, key2, key3 string) *RealGauge3 {
 		labeleds = append(labeleds, l)
 	}
 
-	var entry *RealGauge3
+	var entry *GaugeLabel3
 	for _, l3 := range l.gauge3s {
 		if l3.labelKeys[0] == key1 && l3.labelKeys[1] == key2 && l3.labelKeys[2] == key3 {
 			entry = l3
@@ -262,7 +262,7 @@ func MustPlaceRealGauge3(name, key1, key2, key3 string) *RealGauge3 {
 		}
 	}
 	if entry == nil {
-		entry = &RealGauge3{name: name, labelKeys: [...]string{key1, key2, key3}}
+		entry = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
 		l.gauge3s = append(l.gauge3s, entry)
 	}
 

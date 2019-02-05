@@ -28,13 +28,6 @@ const (
 // arbitrarily go up and down.
 type Gauge struct {
 	name  string
-	value int64
-	head  string
-}
-
-// RealGauge is a Gauge, but for real numbers instead of integers.
-type RealGauge struct {
-	name  string
 	value uint64
 	head  string
 }
@@ -50,33 +43,17 @@ type Counter struct {
 
 // Set replaces the current value with an update.
 // Multiple goroutines may invoke this method simultaneously.
-func (g *Gauge) Set(update int64) {
-	atomic.StoreInt64(&g.value, update)
-}
-
-// Set replaces the current value with an update.
-// Multiple goroutines may invoke this method simultaneously.
-func (g *RealGauge) Set(update float64) {
+func (g *Gauge) Set(update float64) {
 	atomic.StoreUint64(&g.value, math.Float64bits(update))
 }
 
 // Add sets the value to the sum of the current value and summand.
 // Multiple goroutines may invoke this method simultaneously.
-func (g *Gauge) Add(summand int64) {
-	atomic.AddInt64(&g.value, summand)
-}
-
-// Add sets the value to the sum of the current value and summand.
-// Multiple goroutines may invoke this method simultaneously.
-func (g *RealGauge) Add(summand float64) {
-	add(&g.value, summand)
-}
-
-func add(p *uint64, summand float64) {
+func (g *Gauge) Add(summand float64) {
 	for {
-		current := atomic.LoadUint64(p)
+		current := atomic.LoadUint64(&g.value)
 		update := math.Float64bits(math.Float64frombits(current) + summand)
-		if atomic.CompareAndSwapUint64(p, current, update) {
+		if atomic.CompareAndSwapUint64(&g.value, current, update) {
 			return
 		}
 	}
@@ -89,11 +66,10 @@ func (c *Counter) Add(diff uint64) {
 }
 
 var (
-	mutex      sync.Mutex
-	indices    = make(map[string]uint32)
-	gauges     []*Gauge
-	realGauges []*RealGauge
-	counters   []*Counter
+	mutex    sync.Mutex
+	indices  = make(map[string]uint32)
+	gauges   []*Gauge
+	counters []*Counter
 )
 
 // MustPlaceGauge registers a new Gauge if name hasn't been used before.
@@ -101,7 +77,14 @@ var (
 // name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
 func MustPlaceGauge(name string) *Gauge {
 	mustValidName(name)
-	head := formatGaugeHead(name)
+
+	var head strings.Builder
+	head.Grow(15 + 2*len(name))
+	head.WriteString(typePrefix)
+	head.WriteString(name)
+	head.WriteString(gaugeTypeTail)
+	head.WriteString(name)
+	head.WriteByte(' ')
 
 	mutex.Lock()
 
@@ -112,7 +95,7 @@ func MustPlaceGauge(name string) *Gauge {
 		}
 		g = gauges[index]
 	} else {
-		g = &Gauge{name: name, head: head}
+		g = &Gauge{name: name, head: head.String()}
 		indices[name] = uint32(len(gauges))
 		gauges = append(gauges, g)
 	}
@@ -120,43 +103,6 @@ func MustPlaceGauge(name string) *Gauge {
 	mutex.Unlock()
 
 	return g
-}
-
-// MustPlaceRealGauge registers a new RealGauge if name hasn't been used before.
-// The function panics when name is in use as onther metric type or when
-// name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-func MustPlaceRealGauge(name string) *RealGauge {
-	mustValidName(name)
-	head := formatGaugeHead(name)
-
-	mutex.Lock()
-
-	var g *RealGauge
-	if index, ok := indices[name]; ok {
-		if int(index) >= len(realGauges) || realGauges[index].name != name {
-			panic("metrics: name in use as another type")
-		}
-		g = realGauges[index]
-	} else {
-		g = &RealGauge{name: name, head: head}
-		indices[name] = uint32(len(realGauges))
-		realGauges = append(realGauges, g)
-	}
-
-	mutex.Unlock()
-
-	return g
-}
-
-func formatGaugeHead(name string) string {
-	var buf strings.Builder
-	buf.Grow(15 + 2*len(name))
-	buf.WriteString(typePrefix)
-	buf.WriteString(name)
-	buf.WriteString(gaugeTypeTail)
-	buf.WriteString(name)
-	buf.WriteByte(' ')
-	return buf.String()
 }
 
 // MustPlaceCounter registers a new Counter if name hasn't been used before.
@@ -299,17 +245,12 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	mutex.Lock()
 	gaugeView := gauges[:]
-	realGaugeView := realGauges[:]
 	counterView := counters[:]
 	mutex.Unlock()
 
 	tail := sampleTail(make([]byte, 15))
 
 	for _, g := range gaugeView {
-		buf, tail = g.sample(w, buf, tail)
-	}
-
-	for _, g := range realGaugeView {
 		buf, tail = g.sample(w, buf, tail)
 	}
 
@@ -331,9 +272,6 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	// collect written names
 	done := make(map[string]struct{}, len(gaugeView)+len(counterView))
 	for _, g := range gaugeView {
-		done[g.name] = struct{}{}
-	}
-	for _, g := range realGaugeView {
 		done[g.name] = struct{}{}
 	}
 	for _, c := range counterView {
@@ -378,18 +316,6 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Gauge) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte) {
-	buf = append(buf, g.head...)
-	buf = strconv.AppendInt(buf, atomic.LoadInt64(&g.value), 10)
-	buf = append(buf, tail...)
-	if len(buf) > 3900 {
-		w.Write(buf)
-		buf = buf[:0]
-		tail = sampleTail(tail)
-	}
-	return buf, tail
-}
-
-func (g *RealGauge) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte) {
 	if len(buf) > 3900 {
 		w.Write(buf)
 		buf = buf[:0]
