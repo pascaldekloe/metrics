@@ -42,6 +42,18 @@ type Counter struct {
 	label string
 }
 
+// Get returns the current value.
+// Multiple goroutines may invoke this method simultaneously.
+func (g *Gauge) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&g.value))
+}
+
+// Get returns the current value.
+// Multiple goroutines may invoke this method simultaneously.
+func (c *Counter) Get() uint64 {
+	return atomic.LoadUint64(&c.value)
+}
+
 // Set replaces the current value with an update.
 // Multiple goroutines may invoke this method simultaneously.
 func (g *Gauge) Set(update float64) {
@@ -60,7 +72,7 @@ func (g *Gauge) Add(summand float64) {
 	}
 }
 
-// Add increments the value by diff.
+// Add increments the value with diff.
 // Multiple goroutines may invoke this method simultaneously.
 func (c *Counter) Add(diff uint64) {
 	atomic.AddUint64(&c.value, diff)
@@ -266,8 +278,7 @@ func (g *Gauge) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byte)
 	}
 
 	buf = append(buf, g.label...)
-	value := math.Float64frombits(atomic.LoadUint64(&g.value))
-	buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
+	buf = strconv.AppendFloat(buf, g.Get(), 'g', -1, 64)
 	buf = append(buf, tail...)
 	return buf, tail
 }
@@ -280,7 +291,7 @@ func (c *Counter) sample(w http.ResponseWriter, buf, tail []byte) ([]byte, []byt
 	}
 
 	buf = append(buf, c.label...)
-	buf = strconv.AppendUint(buf, atomic.LoadUint64(&c.value), 10)
+	buf = strconv.AppendUint(buf, c.Get(), 10)
 	buf = append(buf, tail...)
 	return buf, tail
 }
