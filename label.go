@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// GaugeLabel1 is a Gauge with a fixed label.
+// GaugeLabel1 is a gauge registration with a fixed label.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type GaugeLabel1 struct {
@@ -16,7 +16,7 @@ type GaugeLabel1 struct {
 	gauges      []*Gauge
 }
 
-// GaugeLabel2 is a Gauge with 2 fixed labels.
+// GaugeLabel2 is a gauge registration with 2 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type GaugeLabel2 struct {
@@ -27,7 +27,7 @@ type GaugeLabel2 struct {
 	gauges      []*Gauge
 }
 
-// GaugeLabel3 is a Gauge with 3 fixed labels.
+// GaugeLabel3 is a gauge registration with 3 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type GaugeLabel3 struct {
@@ -38,19 +38,21 @@ type GaugeLabel3 struct {
 	gauges      []*Gauge
 }
 
-func (g *GaugeLabel1) forLabel(label string) *Gauge {
+// ForLabel returns a dedicated Gauge for the respective label value.
+// The value maps to the key as defined with MustGaugeLabel1.
+func (g *GaugeLabel1) ForLabel(value string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
-		if combo == label {
+		if combo == value {
 			g.mutex.Unlock()
 
 			return g.gauges[i]
 		}
 	}
 
-	g.labelValues = append(g.labelValues, label)
-	entry := &Gauge{label: formatLabel1(g.name, g.labelKey, label)}
+	g.labelValues = append(g.labelValues, value)
+	entry := &Gauge{label: formatLabel1(g.name, g.labelKey, value)}
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
@@ -58,18 +60,20 @@ func (g *GaugeLabel1) forLabel(label string) *Gauge {
 	return entry
 }
 
-func (g *GaugeLabel2) forLabels(label1, label2 string) *Gauge {
+// ForLabel returns a dedicated Gauge for the respective label values.
+// The values map to the keys (in order) as defined with MustGaugeLabel2.
+func (g *GaugeLabel2) ForLabels(value1, value2 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
-		if combo[0] == label1 && combo[1] == label2 {
+		if combo[0] == value1 && combo[1] == value2 {
 			g.mutex.Unlock()
 
 			return g.gauges[i]
 		}
 	}
 
-	combo := [2]string{label1, label2}
+	combo := [2]string{value1, value2}
 	entry := &Gauge{label: formatLabel2(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
@@ -79,18 +83,20 @@ func (g *GaugeLabel2) forLabels(label1, label2 string) *Gauge {
 	return entry
 }
 
-func (g *GaugeLabel3) forLabels(label1, label2, label3 string) *Gauge {
+// ForLabel returns a dedicated Gauge for the respective label values.
+// The values map to the keys (in order) as defined with MustGaugeLabel3.
+func (g *GaugeLabel3) ForLabels(value1, value2, value3 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
-		if combo[0] == label1 && combo[1] == label2 && combo[2] == label3 {
+		if combo[0] == value1 && combo[1] == value2 && combo[2] == value3 {
 			g.mutex.Unlock()
 
 			return g.gauges[i]
 		}
 	}
 
-	combo := [3]string{label1, label2, label3}
+	combo := [3]string{value1, value2, value3}
 	entry := &Gauge{label: formatLabel3(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
@@ -98,36 +104,6 @@ func (g *GaugeLabel3) forLabels(label1, label2, label3 string) *Gauge {
 	g.mutex.Unlock()
 
 	return entry
-}
-
-// Add is like Gauge.Add, with the addition of a label value.
-func (g *GaugeLabel1) Add(summand float64, label string) {
-	g.forLabel(label).Add(summand)
-}
-
-// Add is like Gauge.Add, with the addition of 2 label values.
-func (g *GaugeLabel2) Add(summand float64, label1, label2 string) {
-	g.forLabels(label1, label2).Add(summand)
-}
-
-// Add is like Gauge.Add, with the addition of 3 label values.
-func (g *GaugeLabel3) Add(summand float64, label1, label2, label3 string) {
-	g.forLabels(label1, label2, label3).Add(summand)
-}
-
-// Set is like Gauge.Set, with the addition of a label value.
-func (g *GaugeLabel1) Set(update float64, label string) {
-	g.forLabel(label).Set(update)
-}
-
-// Set is like Gauge.Set, with the addition of 2 label values.
-func (g *GaugeLabel2) Set(update float64, label1, label2 string) {
-	g.forLabels(label1, label2).Set(update)
-}
-
-// Set is like Gauge.Set, with the addition of 3 label values.
-func (g *GaugeLabel3) Set(update float64, label1, label2, label3 string) {
-	g.forLabels(label1, label2, label3).Set(update)
 }
 
 // MustPlaceGaugeLabel1 registers a new GaugeLabel1 if the label key has not

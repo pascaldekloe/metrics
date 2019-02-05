@@ -11,12 +11,12 @@ func Example_labeled() {
 	Thermostat := metrics.MustPlaceGauge("thermostat_celcius")
 	Thermostat.Set(20)
 
-	PerRoom := metrics.MustPlaceGaugeLabel1("thermostat_celcius", "room")
-	PerRoom.Set(19, "kitchen")
+	Kitchen := metrics.MustPlaceGaugeLabel1("thermostat_celcius", "room").ForLabel("kitchen")
+	Kitchen.Set(19)
 
 	Station := metrics.MustPlaceGaugeLabel2("station_celcius", "city", "source")
-	Station.Set(11.2, "Amsterdam (Schiphol)", "KNMI")
-	Station.Set(9.6, "London", "BBC")
+	Station.ForLabels("Amsterdam (Schiphol)", "KNMI").Set(11.2)
+	Station.ForLabels("London", "BBC").Set(9.6)
 
 	// print samples
 	metrics.SkipTimestamp = true
