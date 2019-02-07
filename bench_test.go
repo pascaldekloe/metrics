@@ -7,17 +7,17 @@ import (
 	"testing"
 )
 
-func BenchmarkForLabel(b *testing.B) {
+func BenchmarkPlaceLabels(b *testing.B) {
 	values := [...]string{"first", "second", "third", "fourth"}
-	g1 := MustPlaceGaugeLabel1("bench_label_unit", "label1")
-	g2 := MustPlaceGaugeLabel2("bench_label_unit", "label1", "label2")
-	g3 := MustPlaceGaugeLabel3("bench_label_unit", "label1", "label2", "label3")
+	g1 := Must1LabelGauge("bench_label_unit", "label1")
+	g2 := Must2LabelGauge("bench_label_unit", "label1", "label2")
+	g3 := Must3LabelGauge("bench_label_unit", "label1", "label2", "label3")
 
 	b.Run("sequential", func(b *testing.B) {
 		b.Run("4", func(b *testing.B) {
 			for i := 0; i < b.N; i += 4 {
 				for _, v := range values {
-					g1.ForLabel(v)
+					g1.Place(v)
 				}
 			}
 		})
@@ -25,7 +25,7 @@ func BenchmarkForLabel(b *testing.B) {
 			for i := 0; i < b.N; i += 4 * 4 {
 				for _, v1 := range values {
 					for _, v2 := range values {
-						g2.ForLabels(v1, v2)
+						g2.Place(v1, v2)
 					}
 				}
 			}
@@ -35,7 +35,7 @@ func BenchmarkForLabel(b *testing.B) {
 				for _, v1 := range values {
 					for _, v2 := range values {
 						for _, v3 := range values {
-							g3.ForLabels(v1, v2, v3)
+							g3.Place(v1, v2, v3)
 						}
 					}
 				}
@@ -51,7 +51,7 @@ func BenchmarkForLabel(b *testing.B) {
 						if !pb.Next() {
 							return
 						}
-						g1.ForLabel(v)
+						g1.Place(v)
 					}
 				}
 			})
@@ -64,7 +64,7 @@ func BenchmarkForLabel(b *testing.B) {
 							if !pb.Next() {
 								return
 							}
-							g2.ForLabels(v1, v2)
+							g2.Place(v1, v2)
 						}
 					}
 				}
@@ -79,7 +79,7 @@ func BenchmarkForLabel(b *testing.B) {
 								if !pb.Next() {
 									return
 								}
-								g3.ForLabels(v1, v2, v3)
+								g3.Place(v1, v2, v3)
 							}
 						}
 					}
@@ -224,13 +224,13 @@ func BenchmarkHTTPHandler(b *testing.B) {
 
 			reset()
 			for i := n; i > 0; i-- {
-				MustPlaceGaugeLabel1("real"+strconv.Itoa(i)+"_label_bench_unit", "first").ForLabel(strconv.Itoa(i % 5)).Set(float64(i))
+				Must1LabelGauge("real"+strconv.Itoa(i)+"_label_bench_unit", "first").Place(strconv.Itoa(i % 5)).Set(float64(i))
 			}
 			b.Run("label5", benchmarkHTTPHandler)
 
 			reset()
 			for i := n; i > 0; i-- {
-				MustPlaceGaugeLabel3("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").ForLabels(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
+				Must3LabelGauge("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").Place(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
 			}
 			b.Run("label2x3x5", benchmarkHTTPHandler)
 		})

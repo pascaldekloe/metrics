@@ -87,9 +87,9 @@ type metric struct {
 
 	counter  *Counter
 	gauge    *Gauge
-	gaugeL1s []*GaugeLabel1
-	gaugeL2s []*GaugeLabel2
-	gaugeL3s []*GaugeLabel3
+	gaugeL1s []*Link1LabelGauge
+	gaugeL2s []*Link2LabelGauge
+	gaugeL3s []*Link3LabelGauge
 }
 
 // Register

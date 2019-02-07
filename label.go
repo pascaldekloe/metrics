@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-// GaugeLabel1 is a gauge registration with a fixed label.
+// Link1LabelGauge is a gauge composition with a fixed label.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type GaugeLabel1 struct {
+type Link1LabelGauge struct {
 	name        string
 	mutex       sync.Mutex
 	labelKey    string
@@ -16,10 +16,10 @@ type GaugeLabel1 struct {
 	gauges      []*Gauge
 }
 
-// GaugeLabel2 is a gauge registration with 2 fixed labels.
+// Link2LabelGauge is a gauge composition with 2 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type GaugeLabel2 struct {
+type Link2LabelGauge struct {
 	name        string
 	mutex       sync.Mutex
 	labelKeys   [2]string
@@ -27,10 +27,10 @@ type GaugeLabel2 struct {
 	gauges      []*Gauge
 }
 
-// GaugeLabel3 is a gauge registration with 3 fixed labels.
+// Link3LabelGauge is a gauge composition with 3 fixed labels.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
-type GaugeLabel3 struct {
+type Link3LabelGauge struct {
 	name        string
 	mutex       sync.Mutex
 	labelKeys   [3]string
@@ -38,9 +38,9 @@ type GaugeLabel3 struct {
 	gauges      []*Gauge
 }
 
-// ForLabel returns a dedicated Gauge for the respective label value.
-// The value maps to the key as defined with MustGaugeLabel1.
-func (g *GaugeLabel1) ForLabel(value string) *Gauge {
+// Place registers a new Gauge if the label hasn't been used before.
+// The value maps to the key as defined with Must1LabelGauge.
+func (g *Link1LabelGauge) Place(value string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -52,7 +52,7 @@ func (g *GaugeLabel1) ForLabel(value string) *Gauge {
 	}
 
 	g.labelValues = append(g.labelValues, value)
-	entry := &Gauge{label: formatLabel1(g.name, g.labelKey, value)}
+	entry := &Gauge{label: format1Label(g.name, g.labelKey, value)}
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
@@ -60,9 +60,9 @@ func (g *GaugeLabel1) ForLabel(value string) *Gauge {
 	return entry
 }
 
-// ForLabel returns a dedicated Gauge for the respective label values.
-// The values map to the keys (in order) as defined with MustGaugeLabel2.
-func (g *GaugeLabel2) ForLabels(value1, value2 string) *Gauge {
+// Place registers a new Gauge if the labels haven't been used before.
+// The values map to the keys (in order) as defined with Must2LabelGauge.
+func (g *Link2LabelGauge) Place(value1, value2 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -74,7 +74,7 @@ func (g *GaugeLabel2) ForLabels(value1, value2 string) *Gauge {
 	}
 
 	combo := [2]string{value1, value2}
-	entry := &Gauge{label: formatLabel2(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{label: format2Label(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -83,9 +83,9 @@ func (g *GaugeLabel2) ForLabels(value1, value2 string) *Gauge {
 	return entry
 }
 
-// ForLabel returns a dedicated Gauge for the respective label values.
-// The values map to the keys (in order) as defined with MustGaugeLabel3.
-func (g *GaugeLabel3) ForLabels(value1, value2, value3 string) *Gauge {
+// Place registers a new Gauge if the labels haven't been used before.
+// The values map to the keys (in order) as defined with Must3LabelGauge.
+func (g *Link3LabelGauge) Place(value1, value2, value3 string) *Gauge {
 	g.mutex.Lock()
 
 	for i, combo := range g.labelValues {
@@ -97,7 +97,7 @@ func (g *GaugeLabel3) ForLabels(value1, value2, value3 string) *Gauge {
 	}
 
 	combo := [3]string{value1, value2, value3}
-	entry := &Gauge{label: formatLabel3(g.name, &g.labelKeys, &combo)}
+	entry := &Gauge{label: format3Label(g.name, &g.labelKeys, &combo)}
 	g.labelValues = append(g.labelValues, &combo)
 	g.gauges = append(g.gauges, entry)
 
@@ -106,28 +106,26 @@ func (g *GaugeLabel3) ForLabels(value1, value2, value3 string) *Gauge {
 	return entry
 }
 
-// MustPlaceGaugeLabel1 registers a new GaugeLabel1 if the label key has not
-// been used before on name.
-//
+// Must1LabelGauge returns a composition with one fixed label key.
 // The function panics on any of the following:
 //	* name in use as another metric type
 //	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func MustPlaceGaugeLabel1(name, key string) *GaugeLabel1 {
+//	* key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+func Must1LabelGauge(name, key string) *Link1LabelGauge {
 	mustValidName(name)
 	mustValidKey(key)
 
 	mutex.Lock()
 
-	var g *GaugeLabel1
+	var g *Link1LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &GaugeLabel1{name: name, labelKey: key}
+		g = &Link1LabelGauge{name: name, labelKey: key}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeLineEnd,
 			typeID:      gaugeType,
-			gaugeL1s:    []*GaugeLabel1{g},
+			gaugeL1s:    []*Link1LabelGauge{g},
 		})
 	} else {
 		m := metrics[index]
@@ -142,7 +140,7 @@ func MustPlaceGaugeLabel1(name, key string) *GaugeLabel1 {
 			}
 		}
 		if g == nil {
-			g = &GaugeLabel1{name: name, labelKey: key}
+			g = &Link1LabelGauge{name: name, labelKey: key}
 			m.gaugeL1s = append(m.gaugeL1s, g)
 		}
 	}
@@ -152,15 +150,13 @@ func MustPlaceGaugeLabel1(name, key string) *GaugeLabel1 {
 	return g
 }
 
-// MustPlaceGaugeLabel2 registers a new GaugeLabel2 if the label keys have
-// not been used before on name.
-//
+// Must2LabelGauge returns a composition with two fixed label keys.
 // The function panics on any of the following:
 //	* name in use as another metric type
 //	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-//	* label keys do not appear in ascending order
-func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
+//	* a key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+//	* keys do not appear in ascending order.
+func Must2LabelGauge(name, key1, key2 string) *Link2LabelGauge {
 	mustValidName(name)
 	mustValidKey(key1)
 	mustValidKey(key2)
@@ -170,15 +166,15 @@ func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 
 	mutex.Lock()
 
-	var g *GaugeLabel2
+	var g *Link2LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
+		g = &Link2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeLineEnd,
 			typeID:      gaugeType,
-			gaugeL2s:    []*GaugeLabel2{g},
+			gaugeL2s:    []*Link2LabelGauge{g},
 		})
 	} else {
 		m := metrics[index]
@@ -193,7 +189,7 @@ func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 			}
 		}
 		if g == nil {
-			g = &GaugeLabel2{name: name, labelKeys: [...]string{key1, key2}}
+			g = &Link2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
 			m.gaugeL2s = append(m.gaugeL2s, g)
 		}
 	}
@@ -203,15 +199,13 @@ func MustPlaceGaugeLabel2(name, key1, key2 string) *GaugeLabel2 {
 	return g
 }
 
-// MustPlaceGaugeLabel3 registers a new GaugeLabel3 if the label keys have
-// not been used before on name.
-//
+// Must3LabelGauge returns a composition with three fixed label keys.
 // The function panics on any of the following:
 //	* name in use as another metric type
 //	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* label key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-//	* label keys do not appear in ascending order.
-func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
+//	* a key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+//	* keys do not appear in ascending order.
+func Must3LabelGauge(name, key1, key2, key3 string) *Link3LabelGauge {
 	mustValidName(name)
 	mustValidKey(key1)
 	mustValidKey(key2)
@@ -222,15 +216,15 @@ func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
 
 	mutex.Lock()
 
-	var g *GaugeLabel3
+	var g *Link3LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
+		g = &Link3LabelGauge{name: name, labelKeys: [...]string{key1, key2, key3}}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeLineEnd,
 			typeID:      gaugeType,
-			gaugeL3s:    []*GaugeLabel3{g},
+			gaugeL3s:    []*Link3LabelGauge{g},
 		})
 	} else {
 		m := metrics[index]
@@ -245,7 +239,7 @@ func MustPlaceGaugeLabel3(name, key1, key2, key3 string) *GaugeLabel3 {
 			}
 		}
 		if g == nil {
-			g = &GaugeLabel3{name: name, labelKeys: [...]string{key1, key2, key3}}
+			g = &Link3LabelGauge{name: name, labelKeys: [...]string{key1, key2, key3}}
 			m.gaugeL3s = append(m.gaugeL3s, g)
 		}
 	}
@@ -269,7 +263,7 @@ func mustValidKey(s string) {
 
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func formatLabel1(name, key, value string) string {
+func format1Label(name, key, value string) string {
 	var buf strings.Builder
 	buf.Grow(6 + len(name) + len(key) + len(value))
 
@@ -283,7 +277,7 @@ func formatLabel1(name, key, value string) string {
 	return buf.String()
 }
 
-func formatLabel2(name string, keys, values *[2]string) string {
+func format2Label(name string, keys, values *[2]string) string {
 	var buf strings.Builder
 	buf.Grow(10 + len(name) + len(keys[0]) + len(keys[1]) + len(values[0]) + len(values[1]))
 
@@ -301,7 +295,7 @@ func formatLabel2(name string, keys, values *[2]string) string {
 	return buf.String()
 }
 
-func formatLabel3(name string, keys, values *[3]string) string {
+func format3Label(name string, keys, values *[3]string) string {
 	var buf strings.Builder
 	buf.Grow(14 + len(name) + len(keys[0]) + len(keys[1]) + len(keys[2]) + len(values[0]) + len(values[1]) + len(values[2]))
 
