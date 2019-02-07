@@ -189,6 +189,28 @@ func BenchmarkAdd(b *testing.B) {
 			})
 		})
 	})
+
+	b.Run("histogram5", func(b *testing.B) {
+		g := MustPlaceHistogram("bench_histogram_unit", .01, .02, .05, .1)
+
+		b.Run("sequential", func(b *testing.B) {
+			f := .001
+			for i := 0; i < b.N; i++ {
+				g.Add(f)
+				f += .001
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				f := .001
+				for pb.Next() {
+					g.Add(f)
+					f += .001
+				}
+			})
+		})
+	})
 }
 
 type voidResponseWriter http.Header
@@ -221,6 +243,12 @@ func BenchmarkHTTPHandler(b *testing.B) {
 				MustPlaceGauge("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
 			}
 			b.Run("gauge", benchmarkHTTPHandler)
+
+			reset()
+			for i := n; i > 0; i-- {
+				MustPlaceHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", 1, 2, 3, 4).Add(3.14)
+			}
+			b.Run("histogram5", benchmarkHTTPHandler)
 
 			reset()
 			for i := n; i > 0; i-- {
