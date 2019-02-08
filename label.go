@@ -6,6 +6,7 @@ import (
 )
 
 // Map1LabelGauge is a gauge composition with a fixed label.
+// Multiple goroutines may invoke methods on a Map1LabelGauge simultaneously.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map1LabelGauge struct {
@@ -17,6 +18,7 @@ type Map1LabelGauge struct {
 }
 
 // Map2LabelGauge is a gauge composition with 2 fixed labels.
+// Multiple goroutines may invoke methods on a Map2LabelGauge simultaneously.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map2LabelGauge struct {
@@ -28,6 +30,7 @@ type Map2LabelGauge struct {
 }
 
 // Map3LabelGauge is a gauge composition with 3 fixed labels.
+// Multiple goroutines may invoke methods on a Map3LabelGauge simultaneously.
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map3LabelGauge struct {

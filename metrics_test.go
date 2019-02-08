@@ -19,13 +19,13 @@ func TestSerialize(t *testing.T) {
 	SkipTimestamp = true
 
 	g1 := MustNewGauge("g1")
+	g1.Help("🆘")
 	g1.Set(42)
 	c1 := MustNewCounter("c1")
 	c1.Add(1)
 	c1.Add(8)
-	MustHelp("g1", "🆘")
-	MustHelp("c1", "override first 1")
-	MustHelp("c1", "escape\n… and \\")
+	c1.Help("override first 1")
+	c1.Help("escape\n… and \\")
 
 	rec := httptest.NewRecorder()
 	HTTPHandler(rec, httptest.NewRequest("GET", "/metrics", nil))

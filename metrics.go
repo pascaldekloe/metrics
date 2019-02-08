@@ -327,11 +327,39 @@ func mustValidName(s string) {
 	}
 }
 
+// Help sets a comment. Any previous text value is discarded.
+func (g *Gauge) Help(text string) {
+	help(g.prefix[:len(g.prefix)-1], text)
+}
+
+// Help sets a comment for the name. Any previous text value is discarded.
+func (m *Map1LabelGauge) Help(text string) {
+	help(m.name, text)
+}
+
+// Help sets a comment for the name. Any previous text value is discarded.
+func (m *Map2LabelGauge) Help(text string) {
+	help(m.name, text)
+}
+
+// Help sets a comment for the name. Any previous text value is discarded.
+func (m *Map3LabelGauge) Help(text string) {
+	help(m.name, text)
+}
+
+// Help sets a comment. Any previous text value is discarded.
+func (c *Counter) Help(text string) {
+	help(c.prefix[:len(c.prefix)-1], text)
+}
+
+// Help sets a comment. Any previous text value is discarded.
+func (h *Histogram) Help(text string) {
+	help(h.name, text)
+}
+
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
 
-// MustHelp sets the comment text for a metric name. Any previous text value is
-// discarded. The function panics when name is not in use.
-func MustHelp(name, text string) {
+func help(name, text string) {
 	var buf strings.Builder
 	buf.Grow(len(helpPrefix) + len(name) + len(text) + 2)
 	buf.WriteString(helpPrefix)
@@ -341,13 +369,7 @@ func MustHelp(name, text string) {
 	buf.WriteByte('\n')
 
 	mutex.Lock()
-
-	index, ok := indices[name]
-	if !ok {
-		panic("metrics: name not in use")
-	}
-	metrics[index].helpComment = buf.String()
-
+	metrics[indices[name]].helpComment = buf.String()
 	mutex.Unlock()
 }
 
