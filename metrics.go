@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // SkipTimestamp controls inclusion with sample production.
@@ -150,6 +151,15 @@ func (h *Histogram) Add(value float64) {
 
 	// end transaction by matching count(AndHotIndex).
 	atomic.AddUint64(&h.hotAndColdCounts[hotIndex], 1)
+}
+
+// AddSince applies the duration since start (in seconds) to the countings.
+// E.g., the following one-liner tracks function latencies.
+//
+//	defer Latency.AddSince(time.Now())
+//
+func (h *Histogram) AddSince(start time.Time) {
+	h.Add(float64(time.Now().UnixNano()-start.UnixNano()) * 1e-9)
 }
 
 // Metric is a named record.
