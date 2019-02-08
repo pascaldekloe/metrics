@@ -17,6 +17,8 @@ import (
 var SkipTimestamp bool
 
 const (
+	headerLine = "# Prometheus Samples\n"
+
 	// special comment line starts
 	helpPrefix = "# HELP "
 	typePrefix = "# TYPE "
@@ -378,7 +380,8 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
 
 	// write buffer
-	buf := make([]byte, 0, 4096)
+	buf := make([]byte, len(headerLine), 4096)
+	copy(buf, headerLine)
 
 	// snapshot
 	mutex.Lock()
@@ -390,14 +393,14 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	// serialise samples in order of appearance
 	for _, m := range view {
-		if cap(buf)-len(buf) < len(m.typeComment)+len(m.helpComment) {
+		if cap(buf)-len(buf) < 1+len(m.typeComment)+len(m.helpComment) {
 			w.Write(buf)
 			buf = buf[:0]
 			// need fresh timestamp after Write
 			lineEnd = sampleLineEnd(lineEnd)
 		}
 
-		// Comments
+		buf = append(buf, '\n')
 		buf = append(buf, m.typeComment...)
 		buf = append(buf, m.helpComment...)
 

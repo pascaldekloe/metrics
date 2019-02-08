@@ -31,12 +31,16 @@ func Example() {
 	fmt.Print(rec.Body.String())
 
 	// Output:
+	// # Prometheus Samples
+	//
 	// # TYPE thermostat_celcius gauge
 	// thermostat_celcius 20
 	// thermostat_celcius{room="kitchen"} 19
+	//
 	// # TYPE station_celcius gauge
 	// station_celcius{city="Amsterdam (Schiphol)",source="KNMI"} 11.2
 	// station_celcius{city="London",source="BBC"} 9.6
+	//
 	// # TYPE db_delay_seconds histogram
 	// db_delay_seconds_count 4
 	// db_delay_seconds{le="1e-06"} 1

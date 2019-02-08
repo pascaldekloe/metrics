@@ -41,9 +41,12 @@ func TestSerialize(t *testing.T) {
 		t.Errorf("got content type %q, want UTF-8 charset", contentType)
 	}
 
-	const want = `# TYPE g1 gauge
+	const want = `# Prometheus Samples
+
+# TYPE g1 gauge
 # HELP g1 🆘
 g1 42
+
 # TYPE c1 counter
 # HELP c1 escape\n… and \\
 c1 9
