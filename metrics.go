@@ -322,34 +322,40 @@ func mustValidName(s string) {
 	}
 }
 
-// Help sets a comment. Any previous text value is discarded.
-func (g *Gauge) Help(text string) {
+// Help sets the comment. Any previous text value is replaced.
+func (g *Gauge) Help(text string) *Gauge {
 	help(g.prefix[:len(g.prefix)-1], text)
+	return g
 }
 
-// Help sets a comment for the name. Any previous text value is discarded.
-func (m *Map1LabelGauge) Help(text string) {
+// Help sets the comment for the metric name. Any previous text value is replaced.
+func (m *Map1LabelGauge) Help(text string) *Map1LabelGauge {
 	help(m.name, text)
+	return m
 }
 
-// Help sets a comment for the name. Any previous text value is discarded.
-func (m *Map2LabelGauge) Help(text string) {
+// Help sets the comment for the metric name. Any previous text value is replaced.
+func (m *Map2LabelGauge) Help(text string) *Map2LabelGauge {
 	help(m.name, text)
+	return m
 }
 
-// Help sets a comment for the name. Any previous text value is discarded.
-func (m *Map3LabelGauge) Help(text string) {
+// Help sets the comment for the metric name. Any previous text value is replaced.
+func (m *Map3LabelGauge) Help(text string) *Map3LabelGauge {
 	help(m.name, text)
+	return m
 }
 
-// Help sets a comment. Any previous text value is discarded.
-func (c *Counter) Help(text string) {
+// Help sets the comment. Any previous text value is replaced.
+func (c *Counter) Help(text string) *Counter {
 	help(c.prefix[:len(c.prefix)-1], text)
+	return c
 }
 
-// Help sets a comment. Any previous text value is discarded.
-func (h *Histogram) Help(text string) {
+// Help sets the comment. Any previous text value is replaced.
+func (h *Histogram) Help(text string) *Histogram {
 	help(h.name, text)
+	return h
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
