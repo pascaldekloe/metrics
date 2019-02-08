@@ -18,9 +18,11 @@ func TestSerialize(t *testing.T) {
 	defer reset()
 	SkipTimestamp = true
 
-	MustPlaceGauge("g1").Set(42)
-	MustPlaceCounter("c1").Add(1)
-	MustPlaceCounter("c1").Add(8)
+	g1 := MustNewGauge("g1")
+	g1.Set(42)
+	c1 := MustNewCounter("c1")
+	c1.Add(1)
+	c1.Add(8)
 	MustHelp("g1", "🆘")
 	MustHelp("c1", "override first 1")
 	MustHelp("c1", "escape\n… and \\")
