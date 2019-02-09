@@ -1,8 +1,7 @@
 package metrics_test
 
 import (
-	"fmt"
-	"net/http/httptest"
+	"os"
 
 	"github.com/pascaldekloe/metrics"
 )
@@ -26,10 +25,7 @@ func Example() {
 
 	// print samples
 	metrics.SkipTimestamp = true
-	rec := httptest.NewRecorder()
-	metrics.HTTPHandler(rec, httptest.NewRequest("GET", "/metrics", nil))
-	fmt.Print(rec.Body.String())
-
+	metrics.WriteText(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//

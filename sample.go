@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"io"
 	"math"
 	"net/http"
 	"runtime"
@@ -23,7 +24,12 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
+	WriteText(w)
+}
 
+// WriteText serialises all metrics using a simple text-based exposition format.
+// The Writer is not checked for errors.
+func WriteText(w io.Writer) {
 	// write buffer
 	buf := make([]byte, len(headerLine), 4096)
 	copy(buf, headerLine)
@@ -96,7 +102,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf)
 }
 
-func (g *Gauge) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []byte) {
+func (g *Gauge) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if cap(buf)-len(buf) < len(g.prefix)+maxFloat64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]
@@ -111,7 +117,7 @@ func (g *Gauge) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []by
 	return buf, lineEnd
 }
 
-func (c *Counter) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []byte) {
+func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if cap(buf)-len(buf) < len(c.prefix)+maxUint64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]
@@ -126,7 +132,7 @@ func (c *Counter) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []
 	return buf, lineEnd
 }
 
-func (h *Histogram) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []byte) {
+func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	const infSuffix, sumSuffix, countSuffix = `{le="+Inf"} `, "_sum ", "_count "
 
 	// calculate buffer space; start with static
@@ -227,7 +233,7 @@ func (h *Histogram) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, 
 	return buf, lineEnd
 }
 
-func (c *Copy) sample(w http.ResponseWriter, buf, lineEnd []byte) ([]byte, []byte) {
+func (c *Copy) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if cap(buf)-len(buf) < len(c.prefix)+maxFloat64Text+21 {
 		w.Write(buf)
 		buf = buf[:0]
