@@ -55,6 +55,23 @@ type Counter struct {
 	prefix string
 }
 
+// Copy is a specialised metric for recording snapshots, as opposed to holding
+// the current value at all times. The precision of measurements is enhanced
+// with timestamps, at the cost of performance degradation.
+// Multiple goroutines may invoke methods on a Copy simultaneously.
+type Copy struct {
+	// value holds the latest snapshot
+	value atomic.Value
+	// sample line start as in <name> <label-map>? ' '
+	prefix string
+}
+
+// Snapshot is a Copy value.
+type snapshot struct {
+	value     float64
+	timestamp uint64
+}
+
 // Get returns the current value.
 func (g *Gauge) Get() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&g.valueBits))
@@ -65,9 +82,24 @@ func (c *Counter) Get() uint64 {
 	return atomic.LoadUint64(&c.value)
 }
 
+// Get returns the latest snapshot with its Unix time in milliseconds.
+func (c *Copy) Get() (value float64, timestamp uint64) {
+	v := c.value.Load()
+	if v == nil {
+		return
+	}
+	ss := v.(snapshot)
+	return ss.value, ss.timestamp
+}
+
 // Set replaces the current value with an update.
 func (g *Gauge) Set(update float64) {
 	atomic.StoreUint64(&g.valueBits, math.Float64bits(update))
+}
+
+// Set defines the latest snapshot.
+func (c *Copy) Set(value float64, timestamp time.Time) {
+	c.value.Store(snapshot{value, uint64(timestamp.UnixNano()) / 1e6})
 }
 
 // Add sets the value to the sum of the current value and summand.
@@ -169,12 +201,13 @@ type metric struct {
 
 	typeID int
 
-	counter   *Counter
-	gauge     *Gauge
-	gaugeL1s  []*Map1LabelGauge
-	gaugeL2s  []*Map2LabelGauge
-	gaugeL3s  []*Map3LabelGauge
-	histogram *Histogram
+	counter      *Counter
+	gauge        *Gauge
+	gaugeL1s     []*Map1LabelGauge
+	gaugeL2s     []*Map2LabelGauge
+	gaugeL3s     []*Map3LabelGauge
+	histogram    *Histogram
+	copyFallback *Copy
 }
 
 // Register
@@ -189,8 +222,9 @@ var (
 
 // MustNewGauge registers a new Gauge. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of labeled and unlabeled
-// instances are allowed though.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Copy and the various
+// label options are allowed though. The Copy is ignored once a Gauge is
+// registered under the same name. This fallback allows warm starts.
 func MustNewGauge(name string) *Gauge {
 	mustValidName(name)
 
@@ -221,7 +255,9 @@ func MustNewGauge(name string) *Gauge {
 
 // MustNewCounter registers a new Counter. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Copy and the various
+// label options are allowed though. The Copy is ignored once a Counter is
+// registered under the same name. This fallback allows warm starts.
 func MustNewCounter(name string) *Counter {
 	mustValidName(name)
 
@@ -272,6 +308,7 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 		// delete
 		buckets = append(buckets[:i], buckets[i+1:]...)
 	}
+
 	if i := len(buckets) - 1; i >= 0 && buckets[i] > math.MaxFloat64 {
 		buckets = buckets[:i]
 	}
@@ -320,6 +357,72 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 	return h
 }
 
+// MustNewGaugeCopy registers a new Copy. The function panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Copy and the various
+// label options are allowed though. The Copy is ignored once a Gauge is
+// registered under the same name. This fallback allows warm starts.
+func MustNewGaugeCopy(name string) *Copy {
+	mustValidName(name)
+
+	mutex.Lock()
+
+	var m *metric
+	if index, ok := indices[name]; ok {
+		m = metrics[index]
+		if m.typeID != gaugeType || m.copyFallback != nil {
+			panic("metrics: name already in use")
+		}
+	} else {
+		indices[name] = uint32(len(metrics))
+		m = &metric{
+			typeComment: typePrefix + name + gaugeTypeLineEnd,
+			typeID:      gaugeType,
+		}
+		metrics = append(metrics, m)
+	}
+
+	c := &Copy{prefix: name + " "}
+	m.copyFallback = c
+
+	mutex.Unlock()
+
+	return c
+}
+
+// MustNewCounterCopy registers a new Copy. The function panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Copy and the various
+// label options are allowed though. The Copy is ignored once a Counter is
+// registered under the same name. This fallback allows warm starts.
+func MustNewCounterCopy(name string) *Copy {
+	mustValidName(name)
+
+	mutex.Lock()
+
+	var m *metric
+	if index, ok := indices[name]; ok {
+		m = metrics[index]
+		if m.typeID != counterType || m.copyFallback != nil {
+			panic("metrics: name already in use")
+		}
+	} else {
+		indices[name] = uint32(len(metrics))
+		m = &metric{
+			typeComment: typePrefix + name + counterTypeLineEnd,
+			typeID:      counterType,
+		}
+		metrics = append(metrics, m)
+	}
+
+	c := &Copy{prefix: name + " "}
+	m.copyFallback = c
+
+	mutex.Unlock()
+
+	return c
+}
+
 func mustValidName(s string) {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
@@ -366,6 +469,12 @@ func (c *Counter) Help(text string) *Counter {
 func (h *Histogram) Help(text string) *Histogram {
 	help(h.name, text)
 	return h
+}
+
+// Help sets the comment. Any previous text value is replaced.
+func (c *Copy) Help(text string) *Copy {
+	help(c.prefix[:len(c.prefix)-1], text)
+	return c
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)

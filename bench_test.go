@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func BenchmarkWithLabels(b *testing.B) {
@@ -127,6 +128,24 @@ func BenchmarkGet(b *testing.B) {
 			})
 		})
 	})
+
+	b.Run("copy", func(b *testing.B) {
+		s := MustNewGaugeCopy("bench_copy_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				s.Get()
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					s.Get()
+				}
+			})
+		})
+	})
 }
 
 func BenchmarkSet(b *testing.B) {
@@ -145,6 +164,25 @@ func BenchmarkSet(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					g.Set(42)
+				}
+			})
+		})
+	})
+
+	b.Run("copy", func(b *testing.B) {
+		s := MustNewGaugeCopy("bench_copy_unit")
+		timestamp := time.Now()
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				s.Set(42, timestamp)
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					s.Set(42, timestamp)
 				}
 			})
 		})
@@ -261,6 +299,12 @@ func BenchmarkHTTPHandler(b *testing.B) {
 				Must3LabelGauge("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").With(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
 			}
 			b.Run("label2x3x5", benchmarkHTTPHandler)
+
+			reset()
+			for i := n; i > 0; i-- {
+				MustNewGaugeCopy("copy"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
+			}
+			b.Run("copy", benchmarkHTTPHandler)
 		})
 	}
 }
