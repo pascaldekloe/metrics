@@ -66,6 +66,18 @@ type Copy struct {
 	prefix string
 }
 
+func (g *Gauge) name() string {
+	return g.prefix[:strings.IndexAny(g.prefix, " {")]
+}
+
+func (c *Counter) name() string {
+	return c.prefix[:strings.IndexAny(c.prefix, " {")]
+}
+
+func (c *Copy) name() string {
+	return c.prefix[:strings.IndexAny(c.prefix, " {")]
+}
+
 // Snapshot is a Copy value.
 type snapshot struct {
 	value     float64
@@ -435,45 +447,45 @@ func mustValidName(s string) {
 	}
 }
 
-// Help sets the comment. Any previous text value is replaced.
+// Help sets the comment. Any previous text is replaced.
 func (g *Gauge) Help(text string) *Gauge {
-	help(g.prefix[:len(g.prefix)-1], text)
+	help(g.name(), text)
 	return g
 }
 
-// Help sets the comment for the metric name. Any previous text value is replaced.
+// Help sets the comment for the metric name. Any previous text is replaced.
 func (m *Map1LabelGauge) Help(text string) *Map1LabelGauge {
 	help(m.name, text)
 	return m
 }
 
-// Help sets the comment for the metric name. Any previous text value is replaced.
+// Help sets the comment for the metric name. Any previous text is replaced.
 func (m *Map2LabelGauge) Help(text string) *Map2LabelGauge {
 	help(m.name, text)
 	return m
 }
 
-// Help sets the comment for the metric name. Any previous text value is replaced.
+// Help sets the comment for the metric name. Any previous text is replaced.
 func (m *Map3LabelGauge) Help(text string) *Map3LabelGauge {
 	help(m.name, text)
 	return m
 }
 
-// Help sets the comment. Any previous text value is replaced.
+// Help sets the comment. Any previous text is replaced.
 func (c *Counter) Help(text string) *Counter {
-	help(c.prefix[:len(c.prefix)-1], text)
+	help(c.name(), text)
 	return c
 }
 
-// Help sets the comment. Any previous text value is replaced.
+// Help sets the comment. Any previous text is replaced.
 func (h *Histogram) Help(text string) *Histogram {
 	help(h.name, text)
 	return h
 }
 
-// Help sets the comment. Any previous text value is replaced.
+// Help sets the comment. Any previous text is replaced.
 func (c *Copy) Help(text string) *Copy {
-	help(c.prefix[:len(c.prefix)-1], text)
+	help(c.name(), text)
 	return c
 }
 
