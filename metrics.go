@@ -1,4 +1,7 @@
-// Package metrics provides Prometheus exposition.
+// Package metrics provides atomic measures and Prometheus exposition.
+//
+// Gauge, Counter and Histogram represent live running values and Sample covers
+// captures. Metrics are permanent-the API has no delete.
 package metrics
 
 import (
@@ -11,7 +14,9 @@ import (
 	"time"
 )
 
-// SkipTimestamp controls inclusion with sample production.
+// SkipTimestamp controls time inclusion with sample serialisation.
+// That is, when false, live running values get the current time and
+// Sample provides its own.
 var SkipTimestamp bool
 
 const (
@@ -34,16 +39,6 @@ const (
 	maxUint64Text  = 20
 )
 
-// Gauge is a metric that represents a single numerical value that can
-// arbitrarily go up and down.
-// Multiple goroutines may invoke methods on a Gauge simultaneously.
-type Gauge struct {
-	// value first due atomic alignment requirement
-	valueBits uint64
-	// sample line start as in <name> <label-map>? ' '
-	prefix string
-}
-
 // Counter is a cumulative metric that represents a single monotonically
 // increasing counter whose value can only increase or be reset to zero on
 // restart.
@@ -55,38 +50,43 @@ type Counter struct {
 	prefix string
 }
 
-// Copy is a specialised metric for recording snapshots, as opposed to holding
-// the current value at all times. The precision of measurements is enhanced
-// with timestamps, at the cost of performance degradation.
-// Multiple goroutines may invoke methods on a Copy simultaneously.
-type Copy struct {
-	// value holds the latest snapshot
+// Gauge is a metric that represents a single numerical value that can
+// arbitrarily go up and down.
+// Multiple goroutines may invoke methods on a Gauge simultaneously.
+type Gauge struct {
+	// value first due atomic alignment requirement
+	valueBits uint64
+	// sample line start as in <name> <label-map>? ' '
+	prefix string
+}
+
+// Sample is a specialised metric for measurement captures, as opposed to
+// holding the current value at all times. The precision is enhanced with
+// a timestamp, at the cost of performance degradation.
+// Multiple goroutines may invoke methods on a Sample simultaneously.
+type Sample struct {
+	// value holds the latest measurement
 	value atomic.Value
 	// sample line start as in <name> <label-map>? ' '
 	prefix string
 }
 
-func (g *Gauge) name() string {
-	return g.prefix[:strings.IndexAny(g.prefix, " {")]
+// Measurement is a Sample capture.
+type measurement struct {
+	value     float64
+	timestamp uint64
 }
 
 func (c *Counter) name() string {
 	return c.prefix[:strings.IndexAny(c.prefix, " {")]
 }
 
-func (c *Copy) name() string {
-	return c.prefix[:strings.IndexAny(c.prefix, " {")]
+func (g *Gauge) name() string {
+	return g.prefix[:strings.IndexAny(g.prefix, " {")]
 }
 
-// Snapshot is a Copy value.
-type snapshot struct {
-	value     float64
-	timestamp uint64
-}
-
-// Get returns the current value.
-func (g *Gauge) Get() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&g.valueBits))
+func (s *Sample) name() string {
+	return s.prefix[:strings.IndexAny(s.prefix, " {")]
 }
 
 // Get returns the current value.
@@ -94,14 +94,19 @@ func (c *Counter) Get() uint64 {
 	return atomic.LoadUint64(&c.value)
 }
 
-// Get returns the latest snapshot with its Unix time in milliseconds.
-func (c *Copy) Get() (value float64, timestamp uint64) {
-	v := c.value.Load()
+// Get returns the current value.
+func (g *Gauge) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&g.valueBits))
+}
+
+// Get returns the last capture with its Unix time in milliseconds.
+func (s *Sample) Get() (value float64, timestamp uint64) {
+	v := s.value.Load()
 	if v == nil {
 		return
 	}
-	ss := v.(snapshot)
-	return ss.value, ss.timestamp
+	m := v.(measurement)
+	return m.value, m.timestamp
 }
 
 // Set replaces the current value with an update.
@@ -109,9 +114,14 @@ func (g *Gauge) Set(update float64) {
 	atomic.StoreUint64(&g.valueBits, math.Float64bits(update))
 }
 
-// Set defines the latest snapshot.
-func (c *Copy) Set(value float64, timestamp time.Time) {
-	c.value.Store(snapshot{value, uint64(timestamp.UnixNano()) / 1e6})
+// Set replaces the capture.
+func (s *Sample) Set(value float64, timestamp time.Time) {
+	s.value.Store(measurement{value, uint64(timestamp.UnixNano()) / 1e6})
+}
+
+// Add increments the value with diff.
+func (c *Counter) Add(diff uint64) {
+	atomic.AddUint64(&c.value, diff)
 }
 
 // Add sets the value to the sum of the current value and summand.
@@ -125,11 +135,6 @@ func (g *Gauge) Add(summand float64) {
 		}
 		// lost race
 	}
-}
-
-// Add increments the value with diff.
-func (c *Counter) Add(diff uint64) {
-	atomic.AddUint64(&c.value, diff)
 }
 
 // Histogram samples observations and counts them in configurable buckets.
@@ -213,13 +218,13 @@ type metric struct {
 
 	typeID int
 
-	counter      *Counter
-	gauge        *Gauge
-	gaugeL1s     []*Map1LabelGauge
-	gaugeL2s     []*Map2LabelGauge
-	gaugeL3s     []*Map3LabelGauge
-	histogram    *Histogram
-	copyFallback *Copy
+	gauge     *Gauge
+	counter   *Counter
+	gaugeL1s  []*Map1LabelGauge
+	gaugeL2s  []*Map2LabelGauge
+	gaugeL3s  []*Map3LabelGauge
+	histogram *Histogram
+	sample    *Sample
 }
 
 // Register
@@ -232,43 +237,10 @@ var (
 	metrics []*metric
 )
 
-// MustNewGauge registers a new Gauge. The function panics when name
-// was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Copy and the various
-// label options are allowed though. The Copy is ignored once a Gauge is
-// registered under the same name. This fallback allows warm starts.
-func MustNewGauge(name string) *Gauge {
-	mustValidName(name)
-
-	mutex.Lock()
-
-	var m *metric
-	if index, ok := indices[name]; ok {
-		m = metrics[index]
-		if m.typeID != gaugeType || m.gauge != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
-		}
-		metrics = append(metrics, m)
-	}
-
-	g := &Gauge{prefix: name + " "}
-	m.gauge = g
-
-	mutex.Unlock()
-
-	return g
-}
-
 // MustNewCounter registers a new Counter. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Copy and the various
-// label options are allowed though. The Copy is ignored once a Counter is
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func MustNewCounter(name string) *Counter {
 	mustValidName(name)
@@ -296,6 +268,39 @@ func MustNewCounter(name string) *Counter {
 	mutex.Unlock()
 
 	return c
+}
+
+// MustNewGauge registers a new Gauge. The function panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
+// label options are allowed though. The Sample is ignored once a Gauge is
+// registered under the same name. This fallback allows warm starts.
+func MustNewGauge(name string) *Gauge {
+	mustValidName(name)
+
+	mutex.Lock()
+
+	var m *metric
+	if index, ok := indices[name]; ok {
+		m = metrics[index]
+		if m.typeID != gaugeType || m.gauge != nil {
+			panic("metrics: name already in use")
+		}
+	} else {
+		indices[name] = uint32(len(metrics))
+		m = &metric{
+			typeComment: typePrefix + name + gaugeTypeLineEnd,
+			typeID:      gaugeType,
+		}
+		metrics = append(metrics, m)
+	}
+
+	g := &Gauge{prefix: name + " "}
+	m.gauge = g
+
+	mutex.Unlock()
+
+	return g
 }
 
 var negativeInfinity = math.Inf(-1)
@@ -369,12 +374,12 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 	return h
 }
 
-// MustNewGaugeCopy registers a new Copy. The function panics when name
+// MustNewGaugeSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Copy and the various
-// label options are allowed though. The Copy is ignored once a Gauge is
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
+// label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
-func MustNewGaugeCopy(name string) *Copy {
+func MustNewGaugeSample(name string) *Sample {
 	mustValidName(name)
 
 	mutex.Lock()
@@ -382,7 +387,7 @@ func MustNewGaugeCopy(name string) *Copy {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != gaugeType || m.copyFallback != nil {
+		if m.typeID != gaugeType || m.sample != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
@@ -394,20 +399,20 @@ func MustNewGaugeCopy(name string) *Copy {
 		metrics = append(metrics, m)
 	}
 
-	c := &Copy{prefix: name + " "}
-	m.copyFallback = c
+	s := &Sample{prefix: name + " "}
+	m.sample = s
 
 	mutex.Unlock()
 
-	return c
+	return s
 }
 
-// MustNewCounterCopy registers a new Copy. The function panics when name
+// MustNewCounterSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Copy and the various
-// label options are allowed though. The Copy is ignored once a Counter is
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
-func MustNewCounterCopy(name string) *Copy {
+func MustNewCounterSample(name string) *Sample {
 	mustValidName(name)
 
 	mutex.Lock()
@@ -415,7 +420,7 @@ func MustNewCounterCopy(name string) *Copy {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != counterType || m.copyFallback != nil {
+		if m.typeID != counterType || m.sample != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
@@ -427,12 +432,12 @@ func MustNewCounterCopy(name string) *Copy {
 		metrics = append(metrics, m)
 	}
 
-	c := &Copy{prefix: name + " "}
-	m.copyFallback = c
+	s := &Sample{prefix: name + " "}
+	m.sample = s
 
 	mutex.Unlock()
 
-	return c
+	return s
 }
 
 func mustValidName(s string) {
@@ -445,6 +450,12 @@ func mustValidName(s string) {
 			panic("metrics: name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*")
 		}
 	}
+}
+
+// Help sets the comment. Any previous text is replaced.
+func (c *Counter) Help(text string) *Counter {
+	help(c.name(), text)
+	return c
 }
 
 // Help sets the comment. Any previous text is replaced.
@@ -472,21 +483,15 @@ func (m *Map3LabelGauge) Help(text string) *Map3LabelGauge {
 }
 
 // Help sets the comment. Any previous text is replaced.
-func (c *Counter) Help(text string) *Counter {
-	help(c.name(), text)
-	return c
-}
-
-// Help sets the comment. Any previous text is replaced.
 func (h *Histogram) Help(text string) *Histogram {
 	help(h.name, text)
 	return h
 }
 
 // Help sets the comment. Any previous text is replaced.
-func (c *Copy) Help(text string) *Copy {
-	help(c.name(), text)
-	return c
+func (s *Sample) Help(text string) *Sample {
+	help(s.name(), text)
+	return s
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)

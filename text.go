@@ -28,7 +28,7 @@ func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // WriteText serialises all metrics using a simple text-based exposition format.
-// The Writer is not checked for errors.
+// All errors returned by Writer are ignored by design.
 func WriteText(w io.Writer) {
 	// write buffer
 	buf := make([]byte, len(headerLine), 4096)
@@ -56,42 +56,42 @@ func WriteText(w io.Writer) {
 		buf = append(buf, m.helpComment...)
 
 		switch m.typeID {
+		case counterType:
+			if m.counter != nil {
+				buf, lineEnd = m.counter.sample(w, buf, lineEnd)
+			} else if m.sample != nil {
+				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+			}
+
 		case gaugeType:
-			var sample bool
+			var live bool
 
 			if m.gauge != nil {
 				buf, lineEnd = m.gauge.sample(w, buf, lineEnd)
-				sample = true
+				live = true
 			}
 
 			for _, l1 := range m.gaugeL1s {
 				for _, g := range l1.gauges {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					sample = true
+					live = true
 				}
 			}
 			for _, l2 := range m.gaugeL2s {
 				for _, g := range l2.gauges {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					sample = true
+					live = true
 				}
 			}
 			for _, l3 := range m.gaugeL3s {
 				for _, g := range l3.gauges {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					sample = true
+					live = true
 				}
 			}
 
-			if !sample && m.copyFallback != nil {
-				buf, lineEnd = m.copyFallback.sample(w, buf, lineEnd)
-			}
-
-		case counterType:
-			if m.counter != nil {
-				buf, lineEnd = m.counter.sample(w, buf, lineEnd)
-			} else if m.copyFallback != nil {
-				buf, lineEnd = m.copyFallback.sample(w, buf, lineEnd)
+			if !live && m.sample != nil {
+				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}
 
 		case histogramType:
@@ -100,21 +100,6 @@ func WriteText(w io.Writer) {
 	}
 
 	w.Write(buf)
-}
-
-func (g *Gauge) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(g.prefix)+maxFloat64Text+len(lineEnd) {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
-	buf = append(buf, g.prefix...)
-	buf = strconv.AppendFloat(buf, g.Get(), 'g', -1, 64)
-	buf = append(buf, lineEnd...)
-
-	return buf, lineEnd
 }
 
 func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
@@ -127,6 +112,21 @@ func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 
 	buf = append(buf, c.prefix...)
 	buf = strconv.AppendUint(buf, c.Get(), 10)
+	buf = append(buf, lineEnd...)
+
+	return buf, lineEnd
+}
+
+func (g *Gauge) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(g.prefix)+maxFloat64Text+len(lineEnd) {
+		w.Write(buf)
+		buf = buf[:0]
+		// need fresh timestamp after Write
+		lineEnd = sampleLineEnd(lineEnd)
+	}
+
+	buf = append(buf, g.prefix...)
+	buf = strconv.AppendFloat(buf, g.Get(), 'g', -1, 64)
 	buf = append(buf, lineEnd...)
 
 	return buf, lineEnd
@@ -233,16 +233,16 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	return buf, lineEnd
 }
 
-func (c *Copy) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(c.prefix)+maxFloat64Text+21 {
+func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(s.prefix)+maxFloat64Text+21 {
 		w.Write(buf)
 		buf = buf[:0]
 		// need fresh timestamp after Write
 		lineEnd = sampleLineEnd(lineEnd)
 	}
 
-	if value, timestamp := c.Get(); timestamp != 0 {
-		buf = append(buf, c.prefix...)
+	if value, timestamp := s.Get(); timestamp != 0 {
+		buf = append(buf, s.prefix...)
 		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
 		if !SkipTimestamp {
 			buf = append(buf, ' ')

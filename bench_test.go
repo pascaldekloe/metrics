@@ -129,8 +129,8 @@ func BenchmarkGet(b *testing.B) {
 		})
 	})
 
-	b.Run("copy", func(b *testing.B) {
-		s := MustNewGaugeCopy("bench_copy_unit")
+	b.Run("sample", func(b *testing.B) {
+		s := MustNewGaugeSample("bench_sample_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -169,8 +169,8 @@ func BenchmarkSet(b *testing.B) {
 		})
 	})
 
-	b.Run("copy", func(b *testing.B) {
-		s := MustNewGaugeCopy("bench_copy_unit")
+	b.Run("sample", func(b *testing.B) {
+		s := MustNewGaugeSample("bench_sample_unit")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
@@ -302,9 +302,9 @@ func BenchmarkHTTPHandler(b *testing.B) {
 
 			reset()
 			for i := n; i > 0; i-- {
-				MustNewGaugeCopy("copy"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
+				MustNewGaugeSample("sample"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
 			}
-			b.Run("copy", benchmarkHTTPHandler)
+			b.Run("sample", benchmarkHTTPHandler)
 		})
 	}
 }

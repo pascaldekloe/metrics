@@ -9,8 +9,8 @@ import (
 	"github.com/pascaldekloe/metrics"
 )
 
-func TestSync(t *testing.T) {
-	Sync()
+func TestCapture(t *testing.T) {
+	Capture()
 
 	var buf bytes.Buffer
 	metrics.WriteText(&buf)
