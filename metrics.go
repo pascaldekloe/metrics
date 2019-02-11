@@ -21,8 +21,8 @@ var SkipTimestamp bool
 
 const (
 	// special comment line starts
+	typePrefix = "\n# TYPE "
 	helpPrefix = "# HELP "
-	typePrefix = "# TYPE "
 	// termination of TYPE comment
 	gaugeTypeLineEnd     = " gauge\n"
 	counterTypeLineEnd   = " counter\n"
@@ -143,36 +143,40 @@ func (g *Gauge) Add(summand float64) {
 type Histogram struct {
 	// Fields with atomic access first! (alignment constraint)
 
-	// The most significant bit is the hot index [0 or 1] of each hotAndCold.
-	// Writes update the hot one. The remaining 63 least significant bits
-	// count the number of writes initiated. Write transactions start with
-	// incrementing the counter, and finnish with incrementing the respective
-	// hotAndColdCounts, as a marker for completion.
+	// CountAndHotIndex enables lock-free writes with use of atomic updates.
+	// The most significant bit is the hot index [0 or 1] of each hotAndCold
+	// field. Writes update the hot one. All remaining bits count the number
+	// of writes initiated. Write transactions start by incrementing this
+	// counter, and finish by incrementing the hotAndColdCounts field, as a
+	// marker for completion.
 	//
 	// Reads swap the hot–cold in a switchMutex lock. A cooldown is awaited
-	// in that lock by comparing the number of writes with the initiation
-	// count. Once they match the last write transaction on the now cool one
-	// completed. Data may be consumed at that point. Data must be merged
-	// into the new hot before unlock.
+	// (in such lock) by comparing the number of writes with the initiation
+	// count. Once they match, then the last write transaction on the now
+	// cool one completed. All cool fields must be merged into the new hot
+	// before the unlock of switchMutex.
 	countAndHotIndex uint64
+	// total number of observations
 	hotAndColdCounts [2]uint64
-
 	// sums all observed values
 	hotAndColdSumBits [2]uint64
-	// counts for each bucketBucketBounds, +Inf excluded
+	// counts for each bucketBounds, +Inf omitted
 	hotAndColdBuckets [2][]uint64
 
-	// upper value for each bucket: sorted, +Inf excluded
-	bucketBounds []float64
-
-	// locked on hotAndCold change [reads]
+	// locked on hotAndCold switch (by reads)
 	switchMutex sync.Mutex
+
+	// End of fields with atomic access! (alignment constraint)
 
 	// metric identifier
 	name string
 
-	// corresponding name + label serials for each bucketBounds
-	bucketPrefixes []string
+	// upper value for each bucket, sorted, +Inf omitted
+	bucketBounds []float64
+
+	// corresponding name + label serials for each bucketBounds, including +Inf
+	bucketPrefixes         []string
+	sumPrefix, countPrefix string
 }
 
 // Add applies the value to the countings.
@@ -190,9 +194,10 @@ func (h *Histogram) Add(value float64) {
 
 	// update hot sum
 	for {
-		oldBits := atomic.LoadUint64(&h.hotAndColdSumBits[hotIndex])
+		p := &h.hotAndColdSumBits[hotIndex]
+		oldBits := atomic.LoadUint64(p)
 		newBits := math.Float64bits(math.Float64frombits(oldBits) + value)
-		if atomic.CompareAndSwapUint64(&h.hotAndColdSumBits[hotIndex], oldBits, newBits) {
+		if atomic.CompareAndSwapUint64(p, oldBits, newBits) {
 			break
 		}
 		// lost race
@@ -304,7 +309,6 @@ func MustNewGauge(name string) *Gauge {
 }
 
 var negativeInfinity = math.Inf(-1)
-var positiveInfinity = math.Inf(0)
 
 // MustNewHistogram registers a new Histogram. Buckets define the upper
 // boundaries, preferably in ascending order. Special cases not-a-number
@@ -316,19 +320,16 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 
 	// sort, dedupelicate, drop not-a-number, drop infinities
 	sort.Float64s(buckets)
+	writeIndex := 0
 	last := negativeInfinity
-	for i, f := range buckets {
-		if f > last {
+	for _, f := range buckets {
+		if f > last && f <= math.MaxFloat64 {
+			buckets[writeIndex] = f
+			writeIndex++
 			last = f
-			continue
 		}
-		// delete
-		buckets = append(buckets[:i], buckets[i+1:]...)
 	}
-
-	if i := len(buckets) - 1; i >= 0 && buckets[i] > math.MaxFloat64 {
-		buckets = buckets[:i]
-	}
+	buckets = buckets[:writeIndex]
 
 	mutex.Lock()
 
@@ -358,8 +359,8 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 	h.hotAndColdBuckets[0] = bothBuckets[:len(buckets)]
 	h.hotAndColdBuckets[1] = bothBuckets[len(buckets):]
 
-	// serialise prefixes for each bucket once
-	h.bucketPrefixes = make([]string, len(buckets))
+	// serialise prefixes only once here
+	h.bucketPrefixes = make([]string, len(buckets), len(buckets)+1)
 	for i, f := range buckets {
 		const suffixHead, suffixTail = `{le="`, `"} `
 		var buf strings.Builder
@@ -370,6 +371,9 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 		buf.WriteString(suffixTail)
 		h.bucketPrefixes[i] = buf.String()
 	}
+	h.bucketPrefixes = append(h.bucketPrefixes, name+`{le="+Inf"} `)
+	h.sumPrefix = name + "_sum "
+	h.countPrefix = name + "_count "
 
 	return h
 }

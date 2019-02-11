@@ -51,7 +51,6 @@ func WriteText(w io.Writer) {
 			lineEnd = sampleLineEnd(lineEnd)
 		}
 
-		buf = append(buf, '\n')
 		buf = append(buf, m.typeComment...)
 		buf = append(buf, m.helpComment...)
 
@@ -99,7 +98,9 @@ func WriteText(w io.Writer) {
 		}
 	}
 
-	w.Write(buf)
+	if len(buf) != 0 {
+		w.Write(buf)
+	}
 }
 
 func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
@@ -133,11 +134,8 @@ func (g *Gauge) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 }
 
 func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	const infSuffix, sumSuffix, countSuffix = `{le="+Inf"} `, "_sum ", "_count "
-
-	// calculate buffer space; start with static
-	fit := len(infSuffix) + len(sumSuffix) + len(countSuffix) + 2*maxFloat64Text + maxUint64Text
-	fit += 3 * (len(h.name) + len(lineEnd))
+	// calculate buffer space required
+	fit := len(h.sumPrefix) + len(h.countPrefix) + maxFloat64Text + maxUint64Text + 2*len(lineEnd)
 	for _, prefix := range h.bucketPrefixes {
 		fit += len(prefix) + maxUint64Text + len(lineEnd)
 	}
@@ -176,39 +174,41 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 
 	atomic.StoreUint64(&h.hotAndColdCounts[coldIndex], 0)
 	atomic.AddUint64(&h.hotAndColdCounts[hotIndex], initiated)
-	buf = append(buf, h.name...)
-	buf = append(buf, countSuffix...)
+	buf = append(buf, h.countPrefix...)
 	offset := len(buf)
 	buf = strconv.AppendUint(buf, initiated, 10)
 	countSerial := buf[offset:]
 	buf = append(buf, lineEnd...)
 
-	// each non-infinite bucket
+	// buckets
 	hotBuckets := h.hotAndColdBuckets[hotIndex]
 	coldBuckets := h.hotAndColdBuckets[coldIndex]
 	var count uint64
-	for i := range coldBuckets {
+	for i, prefix := range h.bucketPrefixes {
+		if i >= len(coldBuckets) {
+			// (redundant) +Inf bucket
+			buf = append(buf, prefix...)
+			buf = append(buf, countSerial...)
+			buf = append(buf, lineEnd...)
+			break
+		}
+
 		n := atomic.LoadUint64(&coldBuckets[i])
 		atomic.StoreUint64(&coldBuckets[i], 0)
 		atomic.AddUint64(&hotBuckets[i], n)
 
 		count += n
-		buf = append(buf, h.bucketPrefixes[i]...)
+		buf = append(buf, prefix...)
 		buf = strconv.AppendUint(buf, count, 10)
 		buf = append(buf, lineEnd...)
 	}
 
-	// no idea why we need the redundant infinite bucket?
-	buf = append(buf, h.name...)
-	buf = append(buf, infSuffix...)
-	buf = append(buf, countSerial...)
-	buf = append(buf, lineEnd...)
+	lostRace := false
 
 	// sum
 	sumBits := atomic.LoadUint64(&h.hotAndColdSumBits[coldIndex])
 	atomic.StoreUint64(&h.hotAndColdSumBits[coldIndex], 0)
 	sum := math.Float64frombits(sumBits)
-	lostRace := false
 	for p := &h.hotAndColdSumBits[hotIndex]; ; {
 		oldBits := atomic.LoadUint64(p)
 		newBits := math.Float64bits(math.Float64frombits(oldBits) + sum)
@@ -218,15 +218,14 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 		lostRace = true
 	}
 
+	h.switchMutex.Unlock()
+
 	if lostRace {
 		// refresh timestamp
 		lineEnd = sampleLineEnd(lineEnd)
 	}
 
-	h.switchMutex.Unlock()
-
-	buf = append(buf, h.name...)
-	buf = append(buf, sumSuffix...)
+	buf = append(buf, h.sumPrefix...)
 	buf = strconv.AppendFloat(buf, sum, 'g', -1, 64)
 	buf = append(buf, lineEnd...)
 
@@ -254,9 +253,9 @@ func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	return buf, lineEnd
 }
 
+// SampleLineEnd may include a timestamp, and terminates with a double line feed.
 func sampleLineEnd(buf []byte) []byte {
 	buf = buf[:1]
-
 	if SkipTimestamp {
 		buf[0] = '\n'
 	} else {
