@@ -251,18 +251,22 @@ func BenchmarkAdd(b *testing.B) {
 	})
 }
 
-type voidResponseWriter http.Header
+type voidResponseWriter int64
 
-func (void voidResponseWriter) Header() http.Header    { return http.Header(void) }
-func (voidResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
-func (voidResponseWriter) WriteHeader(statusCode int)  {}
+func (w *voidResponseWriter) Header() http.Header        { return http.Header{} }
+func (w *voidResponseWriter) WriteHeader(statusCode int) {}
+func (w *voidResponseWriter) Write(p []byte) (int, error) {
+	*w += voidResponseWriter(len(p))
+	return len(p), nil
+}
 
 func benchmarkHTTPHandler(b *testing.B) {
 	req := httptest.NewRequest("GET", "/metrics", nil)
-	resp := voidResponseWriter{}
+	var w voidResponseWriter
 	for i := 0; i < b.N; i++ {
-		HTTPHandler(resp, req)
+		HTTPHandler(&w, req)
 	}
+	b.SetBytes(int64(w) / int64(b.N))
 }
 
 func BenchmarkHTTPHandler(b *testing.B) {
