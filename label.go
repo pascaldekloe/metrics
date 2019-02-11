@@ -91,18 +91,54 @@ func (g *Map2LabelGauge) With(value1, value2 string) *Gauge {
 func (g *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	g.mutex.Lock()
 
-	for i, combo := range g.labelValues {
-		if combo[0] == value1 && combo[1] == value2 && combo[2] == value3 {
+	var i int
+	for j := len(g.labelValues); i < j; {
+		h := (i + j) / 2
+
+		var less bool
+		a := g.labelValues[h]
+		if a[0] > value1 {
+			less = false
+		} else if a[0] < value1 {
+			less = true
+		} else if a[1] > value2 {
+			less = false
+		} else if a[1] < value2 {
+			less = true
+		} else if a[2] > value3 {
+			less = false
+		} else if a[2] < value3 {
+			less = true
+		} else {
+			// equal; found a hit
 			g.mutex.Unlock()
 
 			return g.gauges[i]
 		}
+
+		// i ≤ h < j
+		if less {
+			j = h
+		} else {
+			i = h + 1
+		}
 	}
 
 	combo := [3]string{value1, value2, value3}
+	// grow
+	g.labelValues = append(g.labelValues, nil)
+	// move larger ones up
+	copy(g.labelValues[i+1:], g.labelValues[i:])
+	// insert
+	g.labelValues[i] = &combo
+
 	entry := &Gauge{prefix: format3Prefix(g.name, &g.labelKeys, &combo)}
-	g.labelValues = append(g.labelValues, &combo)
-	g.gauges = append(g.gauges, entry)
+	// grow
+	g.gauges = append(g.gauges, nil)
+	// move larger ones up
+	copy(g.gauges[i+1:], g.gauges[i:])
+	// insert
+	g.gauges[i] = entry
 
 	g.mutex.Unlock()
 
