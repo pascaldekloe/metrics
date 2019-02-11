@@ -6,6 +6,7 @@ package metrics
 
 import (
 	"math"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -134,6 +135,7 @@ func (g *Gauge) Add(summand float64) {
 			return
 		}
 		// lost race
+		runtime.Gosched()
 	}
 }
 
@@ -201,6 +203,7 @@ func (h *Histogram) Add(value float64) {
 			break
 		}
 		// lost race
+		runtime.Gosched()
 	}
 
 	// end transaction by matching count(AndHotIndex).
