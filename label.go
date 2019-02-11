@@ -34,113 +34,69 @@ type Map2LabelGauge struct {
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map3LabelGauge struct {
-	name        string
-	mutex       sync.Mutex
-	labelKeys   [3]string
-	labelValues []*[3]string
-	gauges      []*Gauge
+	name      string
+	mutex     sync.Mutex
+	labelKeys [3]string
+	gauges    map[[3]string]*Gauge
 }
 
 // With registers a new Gauge if the label hasn't been used before.
 // The value maps to the key as defined with Must1LabelGauge.
-func (g *Map1LabelGauge) With(value string) *Gauge {
-	g.mutex.Lock()
+func (l1 *Map1LabelGauge) With(value string) *Gauge {
+	l1.mutex.Lock()
 
-	for i, combo := range g.labelValues {
+	for i, combo := range l1.labelValues {
 		if combo == value {
-			hit := g.gauges[i]
+			hit := l1.gauges[i]
 
-			g.mutex.Unlock()
+			l1.mutex.Unlock()
 			return hit
 		}
 	}
 
-	g.labelValues = append(g.labelValues, value)
-	entry := &Gauge{prefix: format1Prefix(g.name, g.labelKey, value)}
-	g.gauges = append(g.gauges, entry)
+	l1.labelValues = append(l1.labelValues, value)
+	entry := &Gauge{prefix: format1Prefix(l1.name, l1.labelKey, value)}
+	l1.gauges = append(l1.gauges, entry)
 
-	g.mutex.Unlock()
+	l1.mutex.Unlock()
 	return entry
 }
 
 // With registers a new Gauge if the labels haven't been used before.
 // The values map to the keys (in order) as defined with Must2LabelGauge.
-func (g *Map2LabelGauge) With(value1, value2 string) *Gauge {
-	g.mutex.Lock()
+func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
+	l2.mutex.Lock()
 
-	for i, combo := range g.labelValues {
+	for i, combo := range l2.labelValues {
 		if combo[0] == value1 && combo[1] == value2 {
-			hit := g.gauges[i]
+			hit := l2.gauges[i]
 
-			g.mutex.Unlock()
+			l2.mutex.Unlock()
 			return hit
 		}
 	}
 
 	combo := [2]string{value1, value2}
-	entry := &Gauge{prefix: format2Prefix(g.name, &g.labelKeys, &combo)}
-	g.labelValues = append(g.labelValues, &combo)
-	g.gauges = append(g.gauges, entry)
+	entry := &Gauge{prefix: format2Prefix(l2.name, &l2.labelKeys, &combo)}
+	l2.labelValues = append(l2.labelValues, &combo)
+	l2.gauges = append(l2.gauges, entry)
 
-	g.mutex.Unlock()
+	l2.mutex.Unlock()
 	return entry
 }
 
 // With registers a new Gauge if the labels haven't been used before.
 // The values map to the keys (in order) as defined with Must3LabelGauge.
-func (g *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
-	g.mutex.Lock()
-
-	var i int
-	for j := len(g.labelValues); i < j; {
-		h := (i + j) / 2
-
-		var less bool
-		a := g.labelValues[h]
-		if a[0] > value1 {
-			less = false
-		} else if a[0] < value1 {
-			less = true
-		} else if a[1] > value2 {
-			less = false
-		} else if a[1] < value2 {
-			less = true
-		} else if a[2] > value3 {
-			less = false
-		} else if a[2] < value3 {
-			less = true
-		} else { // equal
-			hit := g.gauges[i]
-			g.mutex.Unlock()
-
-			return hit
-		}
-
-		// i ≤ h < j
-		if less {
-			j = h
-		} else {
-			i = h + 1
-		}
-	}
-
+func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	combo := [3]string{value1, value2, value3}
-	// grow
-	g.labelValues = append(g.labelValues, nil)
-	// move larger ones up
-	copy(g.labelValues[i+1:], g.labelValues[i:])
-	// insert
-	g.labelValues[i] = &combo
 
-	entry := &Gauge{prefix: format3Prefix(g.name, &g.labelKeys, &combo)}
-	// grow
-	g.gauges = append(g.gauges, nil)
-	// move larger ones up
-	copy(g.gauges[i+1:], g.gauges[i:])
-	// insert
-	g.gauges[i] = entry
-
-	g.mutex.Unlock()
+	l3.mutex.Lock()
+	entry := l3.gauges[combo]
+	if entry == nil {
+		entry = &Gauge{prefix: format3Prefix(l3.name, &l3.labelKeys, &combo)}
+		l3.gauges[combo] = entry
+	}
+	l3.mutex.Unlock()
 
 	return entry
 }
@@ -156,15 +112,15 @@ func Must1LabelGauge(name, key string) *Map1LabelGauge {
 
 	mutex.Lock()
 
-	var g *Map1LabelGauge
+	var l1 *Map1LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &Map1LabelGauge{name: name, labelKey: key}
+		l1 = &Map1LabelGauge{name: name, labelKey: key}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
 			typeID:      gaugeType,
-			gaugeL1s:    []*Map1LabelGauge{g},
+			gaugeL1s:    []*Map1LabelGauge{l1},
 		})
 	} else {
 		m := metrics[index]
@@ -172,21 +128,20 @@ func Must1LabelGauge(name, key string) *Map1LabelGauge {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, l1 := range m.gaugeL1s {
-			if l1.labelKey == key {
-				g = l1
+		for _, o := range m.gaugeL1s {
+			if o.labelKey == key {
+				l1 = o
 				break
 			}
 		}
-		if g == nil {
-			g = &Map1LabelGauge{name: name, labelKey: key}
-			m.gaugeL1s = append(m.gaugeL1s, g)
+		if l1 == nil {
+			l1 = &Map1LabelGauge{name: name, labelKey: key}
+			m.gaugeL1s = append(m.gaugeL1s, l1)
 		}
 	}
 
 	mutex.Unlock()
-
-	return g
+	return l1
 }
 
 // Must2LabelGauge returns a composition with two fixed label keys.
@@ -205,15 +160,15 @@ func Must2LabelGauge(name, key1, key2 string) *Map2LabelGauge {
 
 	mutex.Lock()
 
-	var g *Map2LabelGauge
+	var l2 *Map2LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
+		l2 = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
 			typeID:      gaugeType,
-			gaugeL2s:    []*Map2LabelGauge{g},
+			gaugeL2s:    []*Map2LabelGauge{l2},
 		})
 	} else {
 		m := metrics[index]
@@ -221,21 +176,20 @@ func Must2LabelGauge(name, key1, key2 string) *Map2LabelGauge {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, l2 := range m.gaugeL2s {
-			if l2.labelKeys[0] == key1 && l2.labelKeys[1] == key2 {
-				g = l2
+		for _, o := range m.gaugeL2s {
+			if o.labelKeys[0] == key1 && o.labelKeys[1] == key2 {
+				l2 = o
 				break
 			}
 		}
-		if g == nil {
-			g = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
-			m.gaugeL2s = append(m.gaugeL2s, g)
+		if l2 == nil {
+			l2 = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
+			m.gaugeL2s = append(m.gaugeL2s, l2)
 		}
 	}
 
 	mutex.Unlock()
-
-	return g
+	return l2
 }
 
 // Must3LabelGauge returns a composition with three fixed label keys.
@@ -255,15 +209,19 @@ func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
 
 	mutex.Lock()
 
-	var g *Map3LabelGauge
+	var l3 *Map3LabelGauge
 	if index, ok := indices[name]; !ok {
-		g = &Map3LabelGauge{name: name, labelKeys: [...]string{key1, key2, key3}}
+		l3 = &Map3LabelGauge{
+			name:      name,
+			labelKeys: [...]string{key1, key2, key3},
+			gauges:    make(map[[3]string]*Gauge),
+		}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
 			typeID:      gaugeType,
-			gaugeL3s:    []*Map3LabelGauge{g},
+			gaugeL3s:    []*Map3LabelGauge{l3},
 		})
 	} else {
 		m := metrics[index]
@@ -271,21 +229,24 @@ func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, l3 := range m.gaugeL3s {
-			if l3.labelKeys[0] == key1 && l3.labelKeys[1] == key2 && l3.labelKeys[2] == key3 {
-				g = l3
+		for _, o := range m.gaugeL3s {
+			if o.labelKeys[0] == key1 && o.labelKeys[1] == key2 && o.labelKeys[2] == key3 {
+				l3 = o
 				break
 			}
 		}
-		if g == nil {
-			g = &Map3LabelGauge{name: name, labelKeys: [...]string{key1, key2, key3}}
-			m.gaugeL3s = append(m.gaugeL3s, g)
+		if l3 == nil {
+			l3 = &Map3LabelGauge{
+				name:      name,
+				labelKeys: [...]string{key1, key2, key3},
+				gauges:    make(map[[3]string]*Gauge),
+			}
+			m.gaugeL3s = append(m.gaugeL3s, l3)
 		}
 	}
 
 	mutex.Unlock()
-
-	return g
+	return l3
 }
 
 func mustValidKey(s string) {
