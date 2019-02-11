@@ -3,8 +3,11 @@ package metrics
 import (
 	"bytes"
 	"io"
+	"math"
 	"mime"
 	"net/http/httptest"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -104,6 +107,27 @@ c1 9
 	if got := rec.Body.String(); got != want {
 		t.Errorf("got %q", got)
 		t.Errorf("want %q", want)
+	}
+}
+
+func TestNewHistogramBuckets(t *testing.T) {
+	defer reset()
+
+	var golden = []struct {
+		feed []float64
+		want []float64
+	}{
+		{[]float64{4, 1, 2}, []float64{1, 2, 4}},
+		{[]float64{8, math.Inf(1)}, []float64{8}},
+		{[]float64{math.Inf(-1), 8}, []float64{8}},
+		{[]float64{math.NaN(), 7, math.Inf(1), 3}, []float64{3, 7}},
+	}
+
+	for i, gold := range golden {
+		h := MustNewHistogram("h"+strconv.Itoa(i), gold.feed...)
+		if !reflect.DeepEqual(h.bucketBounds, gold.want) {
+			t.Errorf("%v: got buckets %v, want %v", gold.feed, h.bucketBounds, gold.want)
+		}
 	}
 }
 
