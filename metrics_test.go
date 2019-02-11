@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"io"
 	"math"
-	"mime"
-	"net/http/httptest"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func reset() {
@@ -67,49 +66,6 @@ func TestHelp(t *testing.T) {
 	}
 }
 
-func TestSerialize(t *testing.T) {
-	defer reset()
-	SkipTimestamp = true
-
-	g1 := MustNewGauge("g1")
-	g1.Help("🆘")
-	g1.Set(42)
-	c1 := MustNewCounter("c1")
-	c1.Add(1)
-	c1.Add(8)
-	c1.Help("override first 1")
-	c1.Help("escape\n… and \\")
-
-	rec := httptest.NewRecorder()
-	HTTPHandler(rec, httptest.NewRequest("GET", "/metrics", nil))
-
-	contentType := rec.Result().Header.Get("Content-Type")
-	if media, params, err := mime.ParseMediaType(contentType); err != nil {
-		t.Errorf("malformed content type %q: %s", contentType, err)
-	} else if media != "text/plain" {
-		t.Errorf("got content type %q, want plain text", contentType)
-	} else if params["version"] != "0.0.4" {
-		t.Errorf("got content type %q, want version 0.0.4", contentType)
-	} else if params["charset"] != "UTF-8" {
-		t.Errorf("got content type %q, want UTF-8 charset", contentType)
-	}
-
-	const want = `# Prometheus Samples
-
-# TYPE g1 gauge
-# HELP g1 🆘
-g1 42
-
-# TYPE c1 counter
-# HELP c1 escape\n… and \\
-c1 9
-`
-	if got := rec.Body.String(); got != want {
-		t.Errorf("got %q", got)
-		t.Errorf("want %q", want)
-	}
-}
-
 func TestNewHistogramBuckets(t *testing.T) {
 	defer reset()
 
@@ -131,17 +87,163 @@ func TestNewHistogramBuckets(t *testing.T) {
 	}
 }
 
-func TestHTTPMethods(t *testing.T) {
-	rec := httptest.NewRecorder()
-	HTTPHandler(rec, httptest.NewRequest("POST", "/metrics", nil))
-	got := rec.Result()
+func BenchmarkGet(b *testing.B) {
+	defer reset()
 
-	if got.StatusCode != 405 {
-		t.Errorf("got status code %d, want 405", got.StatusCode)
-	}
+	b.Run("counter", func(b *testing.B) {
+		c := MustNewCounter("bench_integer_unit")
 
-	allow := got.Header.Get("Allow")
-	if !strings.Contains(allow, "OPTIONS") || !strings.Contains(allow, "GET") || !strings.Contains(allow, "HEAD") {
-		t.Errorf("got allow %q, want OPTIONS, GET and HEAD", allow)
-	}
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				c.Get()
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					c.Get()
+				}
+			})
+		})
+	})
+
+	b.Run("gauge", func(b *testing.B) {
+		g := MustNewGauge("bench_real_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				g.Get()
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					g.Get()
+				}
+			})
+		})
+	})
+
+	b.Run("sample", func(b *testing.B) {
+		s := MustNewGaugeSample("bench_sample_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				s.Get()
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					s.Get()
+				}
+			})
+		})
+	})
+}
+
+func BenchmarkSet(b *testing.B) {
+	defer reset()
+
+	b.Run("gauge", func(b *testing.B) {
+		g := MustNewGauge("bench_real_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				g.Set(42)
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					g.Set(42)
+				}
+			})
+		})
+	})
+
+	b.Run("sample", func(b *testing.B) {
+		s := MustNewGaugeSample("bench_sample_unit")
+		timestamp := time.Now()
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				s.Set(42, timestamp)
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					s.Set(42, timestamp)
+				}
+			})
+		})
+	})
+}
+
+func BenchmarkAdd(b *testing.B) {
+	defer reset()
+
+	b.Run("counter", func(b *testing.B) {
+		c := MustNewCounter("bench_integer_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				c.Add(1)
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					c.Add(1)
+				}
+			})
+		})
+	})
+
+	b.Run("gauge", func(b *testing.B) {
+		g := MustNewGauge("bench_real_unit")
+
+		b.Run("sequential", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				g.Add(1)
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					g.Add(1)
+				}
+			})
+		})
+	})
+
+	b.Run("histogram5", func(b *testing.B) {
+		g := MustNewHistogram("bench_histogram_unit", .01, .02, .05, .1)
+
+		b.Run("sequential", func(b *testing.B) {
+			f := .001
+			for i := 0; i < b.N; i++ {
+				g.Add(f)
+				f += .001
+			}
+		})
+		b.Run("2routines", func(b *testing.B) {
+			b.SetParallelism(2)
+			b.RunParallel(func(pb *testing.PB) {
+				f := .001
+				for pb.Next() {
+					g.Add(f)
+					f += .001
+				}
+			})
+		})
+	})
 }
