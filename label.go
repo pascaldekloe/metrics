@@ -48,9 +48,10 @@ func (g *Map1LabelGauge) With(value string) *Gauge {
 
 	for i, combo := range g.labelValues {
 		if combo == value {
-			g.mutex.Unlock()
+			hit := g.gauges[i]
 
-			return g.gauges[i]
+			g.mutex.Unlock()
+			return hit
 		}
 	}
 
@@ -59,7 +60,6 @@ func (g *Map1LabelGauge) With(value string) *Gauge {
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
-
 	return entry
 }
 
@@ -70,9 +70,10 @@ func (g *Map2LabelGauge) With(value1, value2 string) *Gauge {
 
 	for i, combo := range g.labelValues {
 		if combo[0] == value1 && combo[1] == value2 {
-			g.mutex.Unlock()
+			hit := g.gauges[i]
 
-			return g.gauges[i]
+			g.mutex.Unlock()
+			return hit
 		}
 	}
 
@@ -82,7 +83,6 @@ func (g *Map2LabelGauge) With(value1, value2 string) *Gauge {
 	g.gauges = append(g.gauges, entry)
 
 	g.mutex.Unlock()
-
 	return entry
 }
 
@@ -109,11 +109,11 @@ func (g *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 			less = false
 		} else if a[2] < value3 {
 			less = true
-		} else {
-			// equal; found a hit
+		} else { // equal
+			hit := g.gauges[i]
 			g.mutex.Unlock()
 
-			return g.gauges[i]
+			return hit
 		}
 
 		// i ≤ h < j
