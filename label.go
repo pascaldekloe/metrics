@@ -10,10 +10,10 @@ import (
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map1LabelGauge struct {
-	name        string
 	mutex       sync.Mutex
-	labelKey    string
-	labelValues []string
+	name        string
+	labelName   string
+	labelHashes []uint64
 	gauges      []*Gauge
 }
 
@@ -22,10 +22,10 @@ type Map1LabelGauge struct {
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map2LabelGauge struct {
-	name        string
 	mutex       sync.Mutex
-	labelKeys   [2]string
-	labelValues []*[2]string
+	name        string
+	labelNames  [2]string
+	labelHashes []uint64
 	gauges      []*Gauge
 }
 
@@ -34,19 +34,26 @@ type Map2LabelGauge struct {
 // Remember that every unique combination of key-value label pairs represents a
 // new time series, which can dramatically increase the amount of data stored.
 type Map3LabelGauge struct {
-	name      string
-	mutex     sync.Mutex
-	labelKeys [3]string
-	gauges    map[[3]string]*Gauge
+	mutex       sync.Mutex
+	name        string
+	labelNames  [3]string
+	labelHashes []uint64
+	gauges      []*Gauge
 }
 
 // With registers a new Gauge if the label hasn't been used before.
 // The value maps to the key as defined with Must1LabelGauge.
 func (l1 *Map1LabelGauge) With(value string) *Gauge {
+	hash := uint64(14695981039346656037)
+	for i := 0; i < len(value); i++ {
+		hash ^= uint64(value[i])
+		hash *= 1099511628211
+	}
+
 	l1.mutex.Lock()
 
-	for i, combo := range l1.labelValues {
-		if combo == value {
+	for i, h := range l1.labelHashes {
+		if h == hash {
 			hit := l1.gauges[i]
 
 			l1.mutex.Unlock()
@@ -54,21 +61,33 @@ func (l1 *Map1LabelGauge) With(value string) *Gauge {
 		}
 	}
 
-	l1.labelValues = append(l1.labelValues, value)
-	entry := &Gauge{prefix: format1Prefix(l1.name, l1.labelKey, value)}
-	l1.gauges = append(l1.gauges, entry)
+	l1.labelHashes = append(l1.labelHashes, hash)
+	g := &Gauge{prefix: format1Prefix(l1.name, l1.labelName, value)}
+	l1.gauges = append(l1.gauges, g)
 
 	l1.mutex.Unlock()
-	return entry
+	return g
 }
 
 // With registers a new Gauge if the labels haven't been used before.
 // The values map to the keys (in order) as defined with Must2LabelGauge.
 func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
+	hash := uint64(14695981039346656037)
+	hash ^= uint64(len(value1))
+	hash *= 1099511628211
+	for i := 0; i < len(value1); i++ {
+		hash ^= uint64(value1[i])
+		hash *= 1099511628211
+	}
+	for i := 0; i < len(value2); i++ {
+		hash ^= uint64(value2[i])
+		hash *= 1099511628211
+	}
+
 	l2.mutex.Lock()
 
-	for i, combo := range l2.labelValues {
-		if combo[0] == value1 && combo[1] == value2 {
+	for i, h := range l2.labelHashes {
+		if h == hash {
 			hit := l2.gauges[i]
 
 			l2.mutex.Unlock()
@@ -76,45 +95,68 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 		}
 	}
 
-	combo := [2]string{value1, value2}
-	entry := &Gauge{prefix: format2Prefix(l2.name, &l2.labelKeys, &combo)}
-	l2.labelValues = append(l2.labelValues, &combo)
-	l2.gauges = append(l2.gauges, entry)
+	l2.labelHashes = append(l2.labelHashes, hash)
+	g := &Gauge{prefix: format2Prefix(l2.name, &l2.labelNames, value1, value2)}
+	l2.gauges = append(l2.gauges, g)
 
 	l2.mutex.Unlock()
-	return entry
+	return g
 }
 
 // With registers a new Gauge if the labels haven't been used before.
 // The values map to the keys (in order) as defined with Must3LabelGauge.
 func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
-	combo := [3]string{value1, value2, value3}
+	hash := uint64(14695981039346656037)
+	hash ^= uint64(len(value1))
+	hash *= 1099511628211
+	for i := 0; i < len(value1); i++ {
+		hash ^= uint64(value1[i])
+		hash *= 1099511628211
+	}
+	hash ^= uint64(len(value2))
+	hash *= 1099511628211
+	for i := 0; i < len(value2); i++ {
+		hash ^= uint64(value2[i])
+		hash *= 1099511628211
+	}
+	for i := 0; i < len(value3); i++ {
+		hash ^= uint64(value3[i])
+		hash *= 1099511628211
+	}
 
 	l3.mutex.Lock()
-	entry := l3.gauges[combo]
-	if entry == nil {
-		entry = &Gauge{prefix: format3Prefix(l3.name, &l3.labelKeys, &combo)}
-		l3.gauges[combo] = entry
-	}
-	l3.mutex.Unlock()
 
-	return entry
+	for i, h := range l3.labelHashes {
+		if h == hash {
+			hit := l3.gauges[i]
+
+			l3.mutex.Unlock()
+			return hit
+		}
+	}
+
+	l3.labelHashes = append(l3.labelHashes, hash)
+	g := &Gauge{prefix: format3Prefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	l3.gauges = append(l3.gauges, g)
+
+	l3.mutex.Unlock()
+	return g
 }
 
 // Must1LabelGauge returns a composition with one fixed label key.
 // The function panics on any of the following:
-//	* name in use as another metric type
-//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelGauge(name, key string) *Map1LabelGauge {
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
+func Must1LabelGauge(name, labelName string) *Map1LabelGauge {
 	mustValidName(name)
-	mustValidKey(key)
+	mustValidLabelName(labelName)
 
 	mutex.Lock()
 
 	var l1 *Map1LabelGauge
 	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelGauge{name: name, labelKey: key}
+		l1 = &Map1LabelGauge{name: name, labelName: labelName}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
@@ -129,13 +171,13 @@ func Must1LabelGauge(name, key string) *Map1LabelGauge {
 		}
 
 		for _, o := range m.gaugeL1s {
-			if o.labelKey == key {
+			if o.labelName == labelName {
 				l1 = o
 				break
 			}
 		}
 		if l1 == nil {
-			l1 = &Map1LabelGauge{name: name, labelKey: key}
+			l1 = &Map1LabelGauge{name: name, labelName: labelName}
 			m.gaugeL1s = append(m.gaugeL1s, l1)
 		}
 	}
@@ -144,25 +186,25 @@ func Must1LabelGauge(name, key string) *Map1LabelGauge {
 	return l1
 }
 
-// Must2LabelGauge returns a composition with two fixed label keys.
+// Must2LabelGauge returns a composition with two fixed labels.
 // The function panics on any of the following:
-//	* name in use as another metric type
-//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* a key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-//	* keys do not appear in ascending order.
-func Must2LabelGauge(name, key1, key2 string) *Map2LabelGauge {
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label names do not appear in ascending order.
+func Must2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
 	mustValidName(name)
-	mustValidKey(key1)
-	mustValidKey(key2)
-	if key1 > key2 {
-		panic("metrics: label key arguments aren't sorted")
+	mustValidLabelName(label1Name)
+	mustValidLabelName(label2Name)
+	if label1Name > label2Name {
+		panic("metrics: label name arguments aren't sorted")
 	}
 
 	mutex.Lock()
 
 	var l2 *Map2LabelGauge
 	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
+		l2 = &Map2LabelGauge{name: name, labelNames: [...]string{label1Name, label2Name}}
 
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
@@ -177,13 +219,13 @@ func Must2LabelGauge(name, key1, key2 string) *Map2LabelGauge {
 		}
 
 		for _, o := range m.gaugeL2s {
-			if o.labelKeys[0] == key1 && o.labelKeys[1] == key2 {
+			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
 				l2 = o
 				break
 			}
 		}
 		if l2 == nil {
-			l2 = &Map2LabelGauge{name: name, labelKeys: [...]string{key1, key2}}
+			l2 = &Map2LabelGauge{name: name, labelNames: [...]string{label1Name, label2Name}}
 			m.gaugeL2s = append(m.gaugeL2s, l2)
 		}
 	}
@@ -192,19 +234,19 @@ func Must2LabelGauge(name, key1, key2 string) *Map2LabelGauge {
 	return l2
 }
 
-// Must3LabelGauge returns a composition with three fixed label keys.
+// Must3LabelGauge returns a composition with three fixed labels.
 // The function panics on any of the following:
-//	* name in use as another metric type
-//	* name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*
-//	* a key does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-//	* keys do not appear in ascending order.
-func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label names do not appear in ascending order.
+func Must3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
 	mustValidName(name)
-	mustValidKey(key1)
-	mustValidKey(key2)
-	mustValidKey(key3)
-	if key1 > key2 || key2 > key3 {
-		panic("metrics: label key arguments aren't sorted")
+	mustValidLabelName(label1Name)
+	mustValidLabelName(label2Name)
+	mustValidLabelName(label3Name)
+	if label1Name > label2Name || label2Name > label3Name {
+		panic("metrics: label name arguments aren't sorted")
 	}
 
 	mutex.Lock()
@@ -212,9 +254,8 @@ func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
 	var l3 *Map3LabelGauge
 	if index, ok := indices[name]; !ok {
 		l3 = &Map3LabelGauge{
-			name:      name,
-			labelKeys: [...]string{key1, key2, key3},
-			gauges:    make(map[[3]string]*Gauge),
+			name:       name,
+			labelNames: [...]string{label1Name, label2Name, label3Name},
 		}
 
 		indices[name] = uint32(len(metrics))
@@ -230,16 +271,15 @@ func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
 		}
 
 		for _, o := range m.gaugeL3s {
-			if o.labelKeys[0] == key1 && o.labelKeys[1] == key2 && o.labelKeys[2] == key3 {
+			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
 				l3 = o
 				break
 			}
 		}
 		if l3 == nil {
 			l3 = &Map3LabelGauge{
-				name:      name,
-				labelKeys: [...]string{key1, key2, key3},
-				gauges:    make(map[[3]string]*Gauge),
+				name:       name,
+				labelNames: [...]string{label1Name, label2Name, label3Name},
 			}
 			m.gaugeL3s = append(m.gaugeL3s, l3)
 		}
@@ -249,69 +289,69 @@ func Must3LabelGauge(name, key1, key2, key3 string) *Map3LabelGauge {
 	return l3
 }
 
-func mustValidKey(s string) {
+func mustValidLabelName(s string) {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' {
 			continue
 		}
 		if i == 0 || c < '0' || c > '9' {
-			panic("metrics: label key doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
+			panic("metrics: label name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
 		}
 	}
 }
 
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func format1Prefix(name, key, value string) string {
+func format1Prefix(name, labelName, labelValue string) string {
 	var buf strings.Builder
-	buf.Grow(6 + len(name) + len(key) + len(value))
+	buf.Grow(6 + len(name) + len(labelName) + len(labelValue))
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
-	buf.WriteString(key)
+	buf.WriteString(labelName)
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, value)
+	valueEscapes.WriteString(&buf, labelValue)
 	buf.WriteString(`"} `)
 
 	return buf.String()
 }
 
-func format2Prefix(name string, keys, values *[2]string) string {
+func format2Prefix(name string, labelNames *[2]string, labelValue1, labelValue2 string) string {
 	var buf strings.Builder
-	buf.Grow(10 + len(name) + len(keys[0]) + len(keys[1]) + len(values[0]) + len(values[1]))
+	buf.Grow(10 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelValue1) + len(labelValue2))
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
-	buf.WriteString(keys[0])
+	buf.WriteString(labelNames[0])
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, values[0])
+	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(keys[1])
+	buf.WriteString(labelNames[1])
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, values[1])
+	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`"} `)
 
 	return buf.String()
 }
 
-func format3Prefix(name string, keys, values *[3]string) string {
+func format3Prefix(name string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
 	var buf strings.Builder
-	buf.Grow(14 + len(name) + len(keys[0]) + len(keys[1]) + len(keys[2]) + len(values[0]) + len(values[1]) + len(values[2]))
+	buf.Grow(14 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
-	buf.WriteString(keys[0])
+	buf.WriteString(labelNames[0])
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, values[0])
+	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(keys[1])
+	buf.WriteString(labelNames[1])
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, values[1])
+	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`",`)
-	buf.WriteString(keys[2])
+	buf.WriteString(labelNames[2])
 	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, values[2])
+	valueEscapes.WriteString(&buf, labelValue3)
 	buf.WriteString(`"} `)
 
 	return buf.String()
