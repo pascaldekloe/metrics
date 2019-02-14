@@ -71,19 +71,28 @@ func WriteText(w io.Writer) {
 			}
 
 			for _, l1 := range m.gaugeL1s {
-				for _, g := range l1.gauges {
+				l1.mutex.Lock()
+				view := l1.gauges
+				l1.mutex.Unlock()
+				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
 					live = true
 				}
 			}
 			for _, l2 := range m.gaugeL2s {
-				for _, g := range l2.gauges {
+				l2.mutex.Lock()
+				view := l2.gauges
+				l2.mutex.Unlock()
+				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
 					live = true
 				}
 			}
 			for _, l3 := range m.gaugeL3s {
-				for _, g := range l3.gauges {
+				l3.mutex.Lock()
+				view := l3.gauges
+				l3.mutex.Unlock()
+				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
 					live = true
 				}
