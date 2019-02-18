@@ -367,6 +367,12 @@ func (l1 *Map1LabelHistogram) With(value string, buckets ...float64) *Histogram 
 	h := newHistogram(l1.name, buckets)
 	l1.histograms = append(l1.histograms, h)
 
+	h.sumPrefix = merge1LabelPrefix(h.sumPrefix, l1.labelName, value)
+	h.countPrefix = merge1LabelPrefix(h.countPrefix, l1.labelName, value)
+	for i, s := range h.bucketPrefixes {
+		h.bucketPrefixes[i] = merge1LabelPrefix(s, l1.labelName, value)
+	}
+
 	l1.mutex.Unlock()
 	return h
 }
@@ -403,6 +409,12 @@ func (l2 *Map2LabelHistogram) With(value1, value2 string, buckets ...float64) *H
 	l2.labelHashes = append(l2.labelHashes, hash)
 	h := newHistogram(l2.name, buckets)
 	l2.histograms = append(l2.histograms, h)
+
+	h.sumPrefix = merge2LabelPrefix(h.sumPrefix, &l2.labelNames, value1, value2)
+	h.countPrefix = merge2LabelPrefix(h.countPrefix, &l2.labelNames, value1, value2)
+	for i, s := range h.bucketPrefixes {
+		h.bucketPrefixes[i] = merge2LabelPrefix(s, &l2.labelNames, value1, value2)
+	}
 
 	l2.mutex.Unlock()
 	return h
@@ -446,6 +458,12 @@ func (l3 *Map3LabelHistogram) With(value1, value2, value3 string, buckets ...flo
 	l3.labelHashes = append(l3.labelHashes, hash)
 	h := newHistogram(l3.name, buckets)
 	l3.histograms = append(l3.histograms, h)
+
+	h.sumPrefix = merge3LabelPrefix(h.sumPrefix, &l3.labelNames, value1, value2, value3)
+	h.countPrefix = merge3LabelPrefix(h.countPrefix, &l3.labelNames, value1, value2, value3)
+	for i, s := range h.bucketPrefixes {
+		h.bucketPrefixes[i] = merge3LabelPrefix(s, &l3.labelNames, value1, value2, value3)
+	}
 
 	l3.mutex.Unlock()
 	return h
@@ -1329,6 +1347,60 @@ func format3Prefix(name string, labelNames *[3]string, labelValue1, labelValue2,
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
+	buf.WriteString(labelNames[0])
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue1)
+	buf.WriteString(`",`)
+	buf.WriteString(labelNames[1])
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue2)
+	buf.WriteString(`",`)
+	buf.WriteString(labelNames[2])
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue3)
+	buf.WriteString(`"} `)
+
+	return buf.String()
+}
+
+func merge1LabelPrefix(prefix, labelName, labelValue string) string {
+	var buf strings.Builder
+	buf.Grow(4 + len(prefix) + len(labelName) + len(labelValue))
+
+	buf.WriteString(prefix[:len(prefix)-2])
+	buf.WriteByte(',')
+	buf.WriteString(labelName)
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue)
+	buf.WriteString(`"} `)
+
+	return buf.String()
+}
+
+func merge2LabelPrefix(prefix string, labelNames *[2]string, labelValue1, labelValue2 string) string {
+	var buf strings.Builder
+	buf.Grow(8 + len(prefix) + len(labelNames[0]) + len(labelNames[1]) + len(labelValue1) + len(labelValue2))
+
+	buf.WriteString(prefix[:len(prefix)-2])
+	buf.WriteByte(',')
+	buf.WriteString(labelNames[0])
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue1)
+	buf.WriteString(`",`)
+	buf.WriteString(labelNames[1])
+	buf.WriteString(`="`)
+	valueEscapes.WriteString(&buf, labelValue2)
+	buf.WriteString(`"} `)
+
+	return buf.String()
+}
+
+func merge3LabelPrefix(prefix string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
+	var buf strings.Builder
+	buf.Grow(12 + len(prefix) + len(labelNames[0]) + len(labelNames[1]) + len(labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
+
+	buf.WriteString(prefix[:len(prefix)-2])
+	buf.WriteByte(',')
 	buf.WriteString(labelNames[0])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue1)
