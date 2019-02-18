@@ -3,10 +3,12 @@ package metrics
 import "testing"
 
 func BenchmarkLabelWith(b *testing.B) {
+	reg := NewRegister()
+
 	values := [...]string{"first", "second", "third", "fourth"}
-	g1 := Must1LabelGauge("bench_label_unit", "first")
-	g2 := Must2LabelGauge("bench_label_unit", "first", "second")
-	g3 := Must3LabelGauge("bench_label_unit", "first", "second", "third")
+	g1 := reg.Must1LabelGauge("bench_label_unit", "first")
+	g2 := reg.Must2LabelGauge("bench_label_unit", "first", "second")
+	g3 := reg.Must3LabelGauge("bench_label_unit", "first", "second", "third")
 
 	b.Run("sequential", func(b *testing.B) {
 		b.Run("4", func(b *testing.B) {

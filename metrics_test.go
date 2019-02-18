@@ -11,31 +11,28 @@ import (
 	"time"
 )
 
-func reset() {
-	SkipTimestamp = false
-
-	indices = make(map[string]uint32)
-	metrics = nil
-}
-
 func TestHelp(t *testing.T) {
-	defer reset()
+	reg := NewRegister()
 
-	MustNewGauge("g").Help("set on gauge")
-	Must1LabelGauge("l1g", "l").Help("set on map")
-	Must2LabelGauge("l2g", "l1", "l2").With("v1", "v2").Help("set on labeled gauge")
-	Must3LabelGauge("l3g", "l1", "l2", "l3").With("v1", "v2", "v3").Help("set on labeled gauge to override")
-	Must3LabelGauge("l3g", "l4", "l5", "l6").With("v4", "v5", "v6").Help("override on labeled gauge")
+	reg.MustNewGauge("g")
+	reg.MustHelp("g", "set on gauge")
+	reg.Must1LabelGauge("lm", "l")
+	reg.MustHelp("lm", "set on map to override")
+	reg.Must2LabelGauge("lm", "l1", "l2")
+	reg.MustHelp("lm", "override on map")
+	reg.Must3LabelGauge("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
+	reg.MustHelp("lg", "set on labeled gauge to override")
+	reg.Must3LabelGauge("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
+	reg.MustHelp("lg", "override on labeled gauge")
 
 	want := map[string]string{
-		"g":   "set on gauge",
-		"l1g": "set on map",
-		"l2g": "set on labeled gauge",
-		"l3g": "override on labeled gauge",
+		"g":  "set on gauge",
+		"lm": "override on map",
+		"lg": "override on labeled gauge",
 	}
 
 	var buf bytes.Buffer
-	WriteText(&buf)
+	reg.WriteText(&buf)
 
 	got := make(map[string]string)
 	for {
@@ -67,7 +64,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestNewHistogramBuckets(t *testing.T) {
-	defer reset()
+	reg := NewRegister()
 
 	var golden = []struct {
 		feed []float64
@@ -80,7 +77,7 @@ func TestNewHistogramBuckets(t *testing.T) {
 	}
 
 	for i, gold := range golden {
-		h := MustNewHistogram("h"+strconv.Itoa(i), gold.feed...)
+		h := reg.MustNewHistogram("h"+strconv.Itoa(i), gold.feed...)
 		if !reflect.DeepEqual(h.bucketBounds, gold.want) {
 			t.Errorf("%v: got buckets %v, want %v", gold.feed, h.bucketBounds, gold.want)
 		}
@@ -88,10 +85,10 @@ func TestNewHistogramBuckets(t *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	defer reset()
+	reg := NewRegister()
 
 	b.Run("counter", func(b *testing.B) {
-		c := MustNewCounter("bench_integer_unit")
+		c := reg.MustNewCounter("bench_integer_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -109,7 +106,7 @@ func BenchmarkGet(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := MustNewGauge("bench_real_unit")
+		g := reg.MustNewGauge("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -127,7 +124,7 @@ func BenchmarkGet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := MustNewGaugeSample("bench_sample_unit")
+		s := reg.MustNewGaugeSample("bench_sample_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -146,10 +143,10 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	defer reset()
+	reg := NewRegister()
 
 	b.Run("gauge", func(b *testing.B) {
-		g := MustNewGauge("bench_real_unit")
+		g := reg.MustNewGauge("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -167,7 +164,7 @@ func BenchmarkSet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := MustNewGaugeSample("bench_sample_unit")
+		s := reg.MustNewGaugeSample("bench_sample_unit")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
@@ -187,10 +184,10 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	defer reset()
+	reg := NewRegister()
 
 	b.Run("counter", func(b *testing.B) {
-		c := MustNewCounter("bench_integer_unit")
+		c := reg.MustNewCounter("bench_integer_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -208,7 +205,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := MustNewGauge("bench_real_unit")
+		g := reg.MustNewGauge("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -226,7 +223,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("histogram5", func(b *testing.B) {
-		g := MustNewHistogram("bench_histogram_unit", .01, .02, .05, .1)
+		g := reg.MustNewHistogram("bench_histogram_unit", .01, .02, .05, .1)
 
 		b.Run("sequential", func(b *testing.B) {
 			f := .001

@@ -142,7 +142,7 @@ func (l1 *Map1LabelCounter) With(value string) *Counter {
 	}
 
 	l1.labelHashes = append(l1.labelHashes, hash)
-	c := &Counter{prefix: format1Prefix(l1.name, l1.labelName, value)}
+	c := &Counter{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
 	l1.counters = append(l1.counters, c)
 
 	l1.mutex.Unlock()
@@ -179,7 +179,7 @@ func (l2 *Map2LabelCounter) With(value1, value2 string) *Counter {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	c := &Counter{prefix: format2Prefix(l2.name, &l2.labelNames, value1, value2)}
+	c := &Counter{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
 	l2.counters = append(l2.counters, c)
 
 	l2.mutex.Unlock()
@@ -222,7 +222,7 @@ func (l3 *Map3LabelCounter) With(value1, value2, value3 string) *Counter {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	c := &Counter{prefix: format3Prefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	c := &Counter{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
 	l3.counters = append(l3.counters, c)
 
 	l3.mutex.Unlock()
@@ -253,7 +253,7 @@ func (l1 *Map1LabelGauge) With(value string) *Gauge {
 	}
 
 	l1.labelHashes = append(l1.labelHashes, hash)
-	g := &Gauge{prefix: format1Prefix(l1.name, l1.labelName, value)}
+	g := &Gauge{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
 	l1.gauges = append(l1.gauges, g)
 
 	l1.mutex.Unlock()
@@ -290,7 +290,7 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	g := &Gauge{prefix: format2Prefix(l2.name, &l2.labelNames, value1, value2)}
+	g := &Gauge{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
 	l2.gauges = append(l2.gauges, g)
 
 	l2.mutex.Unlock()
@@ -333,7 +333,7 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	g := &Gauge{prefix: format3Prefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	g := &Gauge{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
 	l3.gauges = append(l3.gauges, g)
 
 	l3.mutex.Unlock()
@@ -493,7 +493,7 @@ func (l1 *Map1LabelSample) With(value string) *Sample {
 	}
 
 	l1.labelHashes = append(l1.labelHashes, hash)
-	s := &Sample{prefix: format1Prefix(l1.name, l1.labelName, value)}
+	s := &Sample{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
 	l1.samples = append(l1.samples, s)
 
 	l1.mutex.Unlock()
@@ -530,7 +530,7 @@ func (l2 *Map2LabelSample) With(value1, value2 string) *Sample {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	s := &Sample{prefix: format2Prefix(l2.name, &l2.labelNames, value1, value2)}
+	s := &Sample{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
 	l2.samples = append(l2.samples, s)
 
 	l2.mutex.Unlock()
@@ -573,743 +573,16 @@ func (l3 *Map3LabelSample) With(value1, value2, value3 string) *Sample {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	s := &Sample{prefix: format3Prefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	s := &Sample{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
 	l3.samples = append(l3.samples, s)
 
 	l3.mutex.Unlock()
 	return s
 }
 
-// Must1LabelCounter returns a composition with one fixed label.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelCounter(name, labelName string) *Map1LabelCounter {
-	mustValidName(name)
-	mustValidLabelName(labelName)
-
-	mutex.Lock()
-
-	var l1 *Map1LabelCounter
-	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelCounter{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL1s:  []*Map1LabelCounter{l1},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.counterL1s {
-			if o.labelName == labelName {
-				l1 = o
-				break
-			}
-		}
-		if l1 == nil {
-			l1 = &Map1LabelCounter{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.counterL1s = append(m.counterL1s, l1)
-		}
-	}
-
-	mutex.Unlock()
-	return l1
-}
-
-// Must2LabelCounter returns a composition with two fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l2 *Map2LabelCounter
-	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelCounter{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL2s:  []*Map2LabelCounter{l2},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.counterL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
-			}
-		}
-		if l2 == nil {
-			l2 = &Map2LabelCounter{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.counterL2s = append(m.counterL2s, l2)
-		}
-	}
-
-	mutex.Unlock()
-	return l2
-}
-
-// Must3LabelCounter returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l3 *Map3LabelCounter
-	if index, ok := indices[name]; !ok {
-		l3 = &Map3LabelCounter{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL3s:  []*Map3LabelCounter{l3},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.counterL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelCounter{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.counterL3s = append(m.counterL3s, l3)
-		}
-	}
-
-	mutex.Unlock()
-	return l3
-}
-
-// Must1LabelGauge returns a composition with one fixed label.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelGauge(name, labelName string) *Map1LabelGauge {
-	mustValidName(name)
-	mustValidLabelName(labelName)
-
-	mutex.Lock()
-
-	var l1 *Map1LabelGauge
-	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelGauge{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL1s:    []*Map1LabelGauge{l1},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.gaugeL1s {
-			if o.labelName == labelName {
-				l1 = o
-				break
-			}
-		}
-		if l1 == nil {
-			l1 = &Map1LabelGauge{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.gaugeL1s = append(m.gaugeL1s, l1)
-		}
-	}
-
-	mutex.Unlock()
-	return l1
-}
-
-// Must2LabelGauge returns a composition with two fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l2 *Map2LabelGauge
-	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelGauge{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL2s:    []*Map2LabelGauge{l2},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.gaugeL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
-			}
-		}
-		if l2 == nil {
-			l2 = &Map2LabelGauge{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.gaugeL2s = append(m.gaugeL2s, l2)
-		}
-	}
-
-	mutex.Unlock()
-	return l2
-}
-
-// Must3LabelGauge returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l3 *Map3LabelGauge
-	if index, ok := indices[name]; !ok {
-		l3 = &Map3LabelGauge{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL3s:    []*Map3LabelGauge{l3},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.gaugeL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelGauge{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.gaugeL3s = append(m.gaugeL3s, l3)
-		}
-	}
-
-	mutex.Unlock()
-	return l3
-}
-
-// Must1LabelHistogram returns a composition with one fixed label.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelHistogram(name, labelName string) *Map1LabelHistogram {
-	mustValidName(name)
-	mustValidLabelName(labelName)
-
-	mutex.Lock()
-
-	var l1 *Map1LabelHistogram
-	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelHistogram{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL1s: []*Map1LabelHistogram{l1},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.histogramL1s {
-			if o.labelName == labelName {
-				l1 = o
-				break
-			}
-		}
-		if l1 == nil {
-			l1 = &Map1LabelHistogram{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.histogramL1s = append(m.histogramL1s, l1)
-		}
-	}
-
-	mutex.Unlock()
-	return l1
-}
-
-// Must2LabelHistogram returns a composition with two fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelHistogram(name, label1Name, label2Name string) *Map2LabelHistogram {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l2 *Map2LabelHistogram
-	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelHistogram{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL2s: []*Map2LabelHistogram{l2},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.histogramL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
-			}
-		}
-		if l2 == nil {
-			l2 = &Map2LabelHistogram{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.histogramL2s = append(m.histogramL2s, l2)
-		}
-	}
-
-	mutex.Unlock()
-	return l2
-}
-
-// Must3LabelHistogram returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelHistogram(name, label1Name, label2Name, label3Name string) *Map3LabelHistogram {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l3 *Map3LabelHistogram
-	if index, ok := indices[name]; !ok {
-		l3 = &Map3LabelHistogram{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL3s: []*Map3LabelHistogram{l3},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.histogramL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelHistogram{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.histogramL3s = append(m.histogramL3s, l3)
-		}
-	}
-
-	mutex.Unlock()
-	return l3
-}
-
-// Must1LabelCounterSample returns a composition with one fixed label.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelCounterSample(name, labelName string) *Map1LabelSample {
-	mustValidName(name)
-	mustValidLabelName(labelName)
-
-	mutex.Lock()
-
-	var l1 *Map1LabelSample
-	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL1s:   []*Map1LabelSample{l1},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL1s {
-			if o.labelName == labelName {
-				l1 = o
-				break
-			}
-		}
-		if l1 == nil {
-			l1 = &Map1LabelSample{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.sampleL1s = append(m.sampleL1s, l1)
-		}
-	}
-
-	mutex.Unlock()
-	return l1
-}
-
-// Must2LabelCounterSample returns a composition with two fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l2 *Map2LabelSample
-	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL2s:   []*Map2LabelSample{l2},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
-			}
-		}
-		if l2 == nil {
-			l2 = &Map2LabelSample{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.sampleL2s = append(m.sampleL2s, l2)
-		}
-	}
-
-	mutex.Unlock()
-	return l2
-}
-
-// Must3LabelCounterSample returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l3 *Map3LabelSample
-	if index, ok := indices[name]; !ok {
-		l3 = &Map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL3s:   []*Map3LabelSample{l3},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelSample{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.sampleL3s = append(m.sampleL3s, l3)
-		}
-	}
-
-	mutex.Unlock()
-	return l3
-}
-
-// Must1LabelGaugeSample returns a composition with one fixed label.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelGaugeSample(name, labelName string) *Map1LabelSample {
-	mustValidName(name)
-	mustValidLabelName(labelName)
-
-	mutex.Lock()
-
-	var l1 *Map1LabelSample
-	if index, ok := indices[name]; !ok {
-		l1 = &Map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL1s:   []*Map1LabelSample{l1},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL1s {
-			if o.labelName == labelName {
-				l1 = o
-				break
-			}
-		}
-		if l1 == nil {
-			l1 = &Map1LabelSample{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.sampleL1s = append(m.sampleL1s, l1)
-		}
-	}
-
-	mutex.Unlock()
-	return l1
-}
-
-// Must2LabelGaugeSample returns a composition with two fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l2 *Map2LabelSample
-	if index, ok := indices[name]; !ok {
-		l2 = &Map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL2s:   []*Map2LabelSample{l2},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
-			}
-		}
-		if l2 == nil {
-			l2 = &Map2LabelSample{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.sampleL2s = append(m.sampleL2s, l2)
-		}
-	}
-
-	mutex.Unlock()
-	return l2
-}
-
-// Must3LabelGaugeSample returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	mutex.Lock()
-
-	var l3 *Map3LabelSample
-	if index, ok := indices[name]; !ok {
-		l3 = &Map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		indices[name] = uint32(len(metrics))
-		metrics = append(metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL3s:   []*Map3LabelSample{l3},
-		})
-	} else {
-		m := metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.sampleL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelSample{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.sampleL3s = append(m.sampleL3s, l3)
-		}
-	}
-
-	mutex.Unlock()
-	return l3
-}
-
-func mustValidLabelName(s string) {
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' {
-			continue
-		}
-		if i == 0 || c < '0' || c > '9' {
-			panic("metrics: label name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
-		}
-	}
-}
-
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func format1Prefix(name, labelName, labelValue string) string {
+func format1LabelPrefix(name, labelName, labelValue string) string {
 	var buf strings.Builder
 	buf.Grow(6 + len(name) + len(labelName) + len(labelValue))
 
@@ -1323,7 +596,7 @@ func format1Prefix(name, labelName, labelValue string) string {
 	return buf.String()
 }
 
-func format2Prefix(name string, labelNames *[2]string, labelValue1, labelValue2 string) string {
+func format2LabelPrefix(name string, labelNames *[2]string, labelValue1, labelValue2 string) string {
 	var buf strings.Builder
 	buf.Grow(10 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelValue1) + len(labelValue2))
 
@@ -1341,7 +614,7 @@ func format2Prefix(name string, labelNames *[2]string, labelValue1, labelValue2 
 	return buf.String()
 }
 
-func format3Prefix(name string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
+func format3LabelPrefix(name string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
 	var buf strings.Builder
 	buf.Grow(14 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
 

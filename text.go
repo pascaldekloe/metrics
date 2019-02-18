@@ -10,39 +10,55 @@ import (
 	"time"
 )
 
+// SkipTimestamp controls time inclusion with sample serialisation.
+// When false, then live running values are stamped with the current
+// time and Sample provides its own.
+var SkipTimestamp bool
+
 const headerLine = "# Prometheus Samples\n"
 
-// HTTPHandler serves all metrics.
-func HTTPHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		w.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)
-		if r.Method != http.MethodOptions {
-			http.Error(w, "read-only resource", http.StatusMethodNotAllowed)
+// ServeHTTP provides samples all metrics.
+func ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	std.ServeHTTP(resp, req)
+}
+
+// ServeHTTP provides samples all metrics.
+func (r *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet && req.Method != http.MethodHead {
+		resp.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)
+		if req.Method != http.MethodOptions {
+			http.Error(resp, "read-only resource", http.StatusMethodNotAllowed)
 		}
 
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
-	WriteText(w)
+	resp.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
+	r.WriteText(resp)
 }
 
 // WriteText serialises all metrics using a simple text-based exposition format.
 // All errors returned by Writer are ignored by design.
 func WriteText(w io.Writer) {
+	std.WriteText(w)
+}
+
+// WriteText serialises all metrics using a simple text-based exposition format.
+// All errors returned by Writer are ignored by design.
+func (r *Register) WriteText(w io.Writer) {
 	// write buffer
 	buf := make([]byte, len(headerLine), 4096)
 	copy(buf, headerLine)
 
 	// snapshot
-	mutex.RLock()
-	defer mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 
 	// reuse to minimise time lookups
 	lineEnd := sampleLineEnd(make([]byte, 21))
 
 	// serialise samples in order of appearance
-	for _, m := range metrics {
+	for _, m := range r.metrics {
 		if cap(buf)-len(buf) < 1+len(m.typeComment)+len(m.helpComment) {
 			w.Write(buf)
 			buf = buf[:0]
@@ -321,7 +337,7 @@ func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if value, timestamp := s.Get(); timestamp != 0 {
 		buf = append(buf, s.prefix...)
 		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
-		if !SkipTimestamp {
+		if SkipTimestamp {
 			buf = append(buf, ' ')
 			buf = strconv.AppendUint(buf, timestamp, 10)
 		}
