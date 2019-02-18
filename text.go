@@ -54,7 +54,7 @@ func WriteText(w io.Writer) {
 		buf = append(buf, m.typeComment...)
 		buf = append(buf, m.helpComment...)
 
-		switch m.typeID {
+		switch m.typeID() {
 		case counterType:
 			if m.counter != nil {
 				buf, lineEnd = m.counter.sample(w, buf, lineEnd)

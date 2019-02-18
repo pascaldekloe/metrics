@@ -29,9 +29,10 @@ const (
 	counterTypeLineEnd   = " counter\n"
 	histogramTypeLineEnd = " histogram\n"
 
-	gaugeType     = 'g'
-	counterType   = 'c'
-	histogramType = 'h'
+	// last letter of TYPE comment
+	gaugeType     = 'e'
+	counterType   = 'r'
+	histogramType = 'm'
 )
 
 // Serialisation Byte Limits
@@ -224,8 +225,6 @@ type metric struct {
 	typeComment string
 	helpComment string
 
-	typeID int
-
 	gauge     *Gauge
 	counter   *Counter
 	gaugeL1s  []*Map1LabelGauge
@@ -233,6 +232,10 @@ type metric struct {
 	gaugeL3s  []*Map3LabelGauge
 	histogram *Histogram
 	sample    *Sample
+}
+
+func (m *metric) typeID() byte {
+	return m.typeComment[len(m.typeComment)-2]
 }
 
 // Register
@@ -258,15 +261,12 @@ func MustNewCounter(name string) *Counter {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != counterType || m.counter != nil {
+		if m.typeID() != counterType || m.counter != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
 		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			typeID:      counterType,
-		}
+		m = &metric{typeComment: typePrefix + name + counterTypeLineEnd}
 		metrics = append(metrics, m)
 	}
 
@@ -291,15 +291,12 @@ func MustNewGauge(name string) *Gauge {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != gaugeType || m.gauge != nil {
+		if m.typeID() != gaugeType || m.gauge != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
 		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
-		}
+		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
 		metrics = append(metrics, m)
 	}
 
@@ -339,15 +336,12 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != histogramType || m.histogram != nil {
+		if m.typeID() != histogramType || m.histogram != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
 		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + histogramTypeLineEnd,
-			typeID:      histogramType,
-		}
+		m = &metric{typeComment: typePrefix + name + histogramTypeLineEnd}
 		metrics = append(metrics, m)
 	}
 
@@ -394,15 +388,12 @@ func MustNewGaugeSample(name string) *Sample {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != gaugeType || m.sample != nil {
+		if m.typeID() != gaugeType || m.sample != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
 		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
-		}
+		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
 		metrics = append(metrics, m)
 	}
 
@@ -427,15 +418,12 @@ func MustNewCounterSample(name string) *Sample {
 	var m *metric
 	if index, ok := indices[name]; ok {
 		m = metrics[index]
-		if m.typeID != counterType || m.sample != nil {
+		if m.typeID() != counterType || m.sample != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
 		indices[name] = uint32(len(metrics))
-		m = &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			typeID:      counterType,
-		}
+		m = &metric{typeComment: typePrefix + name + counterTypeLineEnd}
 		metrics = append(metrics, m)
 	}
 

@@ -170,12 +170,11 @@ func Must1LabelGauge(name, labelName string) *Map1LabelGauge {
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
 			gaugeL1s:    []*Map1LabelGauge{l1},
 		})
 	} else {
 		m := metrics[index]
-		if m.typeID != gaugeType {
+		if m.typeID() != gaugeType {
 			panic("metrics: name in use as another type")
 		}
 
@@ -218,12 +217,11 @@ func Must2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
 			gaugeL2s:    []*Map2LabelGauge{l2},
 		})
 	} else {
 		m := metrics[index]
-		if m.typeID != gaugeType {
+		if m.typeID() != gaugeType {
 			panic("metrics: name in use as another type")
 		}
 
@@ -270,12 +268,11 @@ func Must3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3Label
 		indices[name] = uint32(len(metrics))
 		metrics = append(metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			typeID:      gaugeType,
 			gaugeL3s:    []*Map3LabelGauge{l3},
 		})
 	} else {
 		m := metrics[index]
-		if m.typeID != gaugeType {
+		if m.typeID() != gaugeType {
 			panic("metrics: name in use as another type")
 		}
 
