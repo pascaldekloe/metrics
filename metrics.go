@@ -225,13 +225,23 @@ type metric struct {
 	typeComment string
 	helpComment string
 
-	gauge     *Gauge
 	counter   *Counter
-	gaugeL1s  []*Map1LabelGauge
-	gaugeL2s  []*Map2LabelGauge
-	gaugeL3s  []*Map3LabelGauge
+	gauge     *Gauge
 	histogram *Histogram
 	sample    *Sample
+
+	counterL1s   []*Map1LabelCounter
+	counterL2s   []*Map2LabelCounter
+	counterL3s   []*Map3LabelCounter
+	gaugeL1s     []*Map1LabelGauge
+	gaugeL2s     []*Map2LabelGauge
+	gaugeL3s     []*Map3LabelGauge
+	histogramL1s []*Map1LabelHistogram
+	histogramL2s []*Map2LabelHistogram
+	histogramL3s []*Map3LabelHistogram
+	sampleL1s    []*Map1LabelSample
+	sampleL2s    []*Map2LabelSample
+	sampleL3s    []*Map3LabelSample
 }
 
 func (m *metric) typeID() byte {
@@ -318,18 +328,7 @@ var negativeInfinity = math.Inf(-1)
 func MustNewHistogram(name string, buckets ...float64) *Histogram {
 	mustValidName(name)
 
-	// sort, dedupelicate, drop not-a-number, drop infinities
-	sort.Float64s(buckets)
-	writeIndex := 0
-	last := negativeInfinity
-	for _, f := range buckets {
-		if f > last && f <= math.MaxFloat64 {
-			buckets[writeIndex] = f
-			writeIndex++
-			last = f
-		}
-	}
-	buckets = buckets[:writeIndex]
+	h := newHistogram(name, buckets)
 
 	mutex.Lock()
 
@@ -345,10 +344,28 @@ func MustNewHistogram(name string, buckets ...float64) *Histogram {
 		metrics = append(metrics, m)
 	}
 
-	h := &Histogram{name: name, bucketBounds: buckets}
 	m.histogram = h
 
 	mutex.Unlock()
+
+	return h
+}
+
+func newHistogram(name string, buckets []float64) *Histogram {
+	// sort, dedupelicate, drop not-a-number, drop infinities
+	sort.Float64s(buckets)
+	writeIndex := 0
+	last := negativeInfinity
+	for _, f := range buckets {
+		if f > last && f <= math.MaxFloat64 {
+			buckets[writeIndex] = f
+			writeIndex++
+			last = f
+		}
+	}
+	buckets = buckets[:writeIndex]
+
+	h := &Histogram{name: name, bucketBounds: buckets}
 
 	// One memory allocation for hot & cold.
 	// Must be alligned for atomic access!
@@ -459,6 +476,36 @@ func (g *Gauge) Help(text string) *Gauge {
 	return g
 }
 
+// Help sets the comment. Any previous text is replaced.
+func (h *Histogram) Help(text string) *Histogram {
+	help(h.name, text)
+	return h
+}
+
+// Help sets the comment. Any previous text is replaced.
+func (s *Sample) Help(text string) *Sample {
+	help(s.name(), text)
+	return s
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map1LabelCounter) Help(text string) *Map1LabelCounter {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map2LabelCounter) Help(text string) *Map2LabelCounter {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map3LabelCounter) Help(text string) *Map3LabelCounter {
+	help(m.name, text)
+	return m
+}
+
 // Help sets the comment for the metric name. Any previous text is replaced.
 func (m *Map1LabelGauge) Help(text string) *Map1LabelGauge {
 	help(m.name, text)
@@ -477,16 +524,40 @@ func (m *Map3LabelGauge) Help(text string) *Map3LabelGauge {
 	return m
 }
 
-// Help sets the comment. Any previous text is replaced.
-func (h *Histogram) Help(text string) *Histogram {
-	help(h.name, text)
-	return h
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map1LabelHistogram) Help(text string) *Map1LabelHistogram {
+	help(m.name, text)
+	return m
 }
 
-// Help sets the comment. Any previous text is replaced.
-func (s *Sample) Help(text string) *Sample {
-	help(s.name(), text)
-	return s
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map2LabelHistogram) Help(text string) *Map2LabelHistogram {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map3LabelHistogram) Help(text string) *Map3LabelHistogram {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map1LabelSample) Help(text string) *Map1LabelSample {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map2LabelSample) Help(text string) *Map2LabelSample {
+	help(m.name, text)
+	return m
+}
+
+// Help sets the comment for the metric name. Any previous text is replaced.
+func (m *Map3LabelSample) Help(text string) *Map3LabelSample {
+	help(m.name, text)
+	return m
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)

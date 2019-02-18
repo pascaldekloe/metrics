@@ -56,18 +56,51 @@ func WriteText(w io.Writer) {
 
 		switch m.typeID() {
 		case counterType:
+			var present bool
+
 			if m.counter != nil {
 				buf, lineEnd = m.counter.sample(w, buf, lineEnd)
-			} else if m.sample != nil {
+				present = true
+			}
+
+			for _, l1 := range m.counterL1s {
+				l1.mutex.Lock()
+				view := l1.counters
+				l1.mutex.Unlock()
+				for _, c := range view {
+					buf, lineEnd = c.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+			for _, l2 := range m.counterL2s {
+				l2.mutex.Lock()
+				view := l2.counters
+				l2.mutex.Unlock()
+				for _, c := range view {
+					buf, lineEnd = c.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+			for _, l3 := range m.counterL3s {
+				l3.mutex.Lock()
+				view := l3.counters
+				l3.mutex.Unlock()
+				for _, c := range view {
+					buf, lineEnd = c.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+
+			if !present && m.sample != nil {
 				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}
 
 		case gaugeType:
-			var live bool
+			var present bool
 
 			if m.gauge != nil {
 				buf, lineEnd = m.gauge.sample(w, buf, lineEnd)
-				live = true
+				present = true
 			}
 
 			for _, l1 := range m.gaugeL1s {
@@ -76,7 +109,7 @@ func WriteText(w io.Writer) {
 				l1.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					live = true
+					present = true
 				}
 			}
 			for _, l2 := range m.gaugeL2s {
@@ -85,7 +118,7 @@ func WriteText(w io.Writer) {
 				l2.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					live = true
+					present = true
 				}
 			}
 			for _, l3 := range m.gaugeL3s {
@@ -94,16 +127,53 @@ func WriteText(w io.Writer) {
 				l3.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					live = true
+					present = true
 				}
 			}
 
-			if !live && m.sample != nil {
+			if !present && m.sample != nil {
 				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}
 
 		case histogramType:
-			buf, lineEnd = m.histogram.sample(w, buf, lineEnd)
+			var present bool
+
+			if m.histogram != nil {
+				buf, lineEnd = m.histogram.sample(w, buf, lineEnd)
+				present = true
+			}
+
+			for _, l1 := range m.histogramL1s {
+				l1.mutex.Lock()
+				view := l1.histograms
+				l1.mutex.Unlock()
+				for _, h := range view {
+					buf, lineEnd = h.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+			for _, l2 := range m.histogramL2s {
+				l2.mutex.Lock()
+				view := l2.histograms
+				l2.mutex.Unlock()
+				for _, h := range view {
+					buf, lineEnd = h.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+			for _, l3 := range m.histogramL3s {
+				l3.mutex.Lock()
+				view := l3.histograms
+				l3.mutex.Unlock()
+				for _, h := range view {
+					buf, lineEnd = h.sample(w, buf, lineEnd)
+					present = true
+				}
+			}
+
+			if !present && m.sample != nil {
+				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+			}
 		}
 	}
 
