@@ -5,10 +5,14 @@ import (
 	"sync"
 )
 
+// FNV-1a
+const (
+	hashOffset = 14695981039346656037
+	hashPrime  = 1099511628211
+)
+
 // Map1LabelGauge is a gauge composition with a fixed label.
 // Multiple goroutines may invoke methods on a Map1LabelGauge simultaneously.
-// Remember that every unique combination of key-value label pairs represents a
-// new time series, which can dramatically increase the amount of data stored.
 type Map1LabelGauge struct {
 	mutex       sync.Mutex
 	name        string
@@ -19,8 +23,6 @@ type Map1LabelGauge struct {
 
 // Map2LabelGauge is a gauge composition with 2 fixed labels.
 // Multiple goroutines may invoke methods on a Map2LabelGauge simultaneously.
-// Remember that every unique combination of key-value label pairs represents a
-// new time series, which can dramatically increase the amount of data stored.
 type Map2LabelGauge struct {
 	mutex       sync.Mutex
 	name        string
@@ -31,8 +33,6 @@ type Map2LabelGauge struct {
 
 // Map3LabelGauge is a gauge composition with 3 fixed labels.
 // Multiple goroutines may invoke methods on a Map3LabelGauge simultaneously.
-// Remember that every unique combination of key-value label pairs represents a
-// new time series, which can dramatically increase the amount of data stored.
 type Map3LabelGauge struct {
 	mutex       sync.Mutex
 	name        string
@@ -41,13 +41,16 @@ type Map3LabelGauge struct {
 	gauges      []*Gauge
 }
 
-// With registers a new Gauge if the label hasn't been used before.
-// The value maps to the key as defined with Must1LabelGauge.
+// With returns a dedicated Gauge for a label. The value
+// maps to the name as defined at Must2LabelGauge. With
+// registers a new Gauge if the label hasn't been used before.
+// Remember that each label represents a new time series,
+// which can dramatically increase the amount of data stored.
 func (l1 *Map1LabelGauge) With(value string) *Gauge {
-	hash := uint64(14695981039346656037)
+	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 
 	l1.mutex.Lock()
@@ -69,19 +72,22 @@ func (l1 *Map1LabelGauge) With(value string) *Gauge {
 	return g
 }
 
-// With registers a new Gauge if the labels haven't been used before.
-// The values map to the keys (in order) as defined with Must2LabelGauge.
+// With returns a dedicated Gauge for a label combination. The values
+// map to the names (in order) as defined at Must2LabelGauge. With
+// registers a new Gauge if the combination hasn't been used before.
+// Remember that each label combination represents a new time series,
+// which can dramatically increase the amount of data stored.
 func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
-	hash := uint64(14695981039346656037)
+	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
-	hash *= 1099511628211
+	hash *= hashPrime
 	for i := 0; i < len(value1); i++ {
 		hash ^= uint64(value1[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 	for i := 0; i < len(value2); i++ {
 		hash ^= uint64(value2[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 
 	l2.mutex.Lock()
@@ -103,25 +109,28 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 	return g
 }
 
-// With registers a new Gauge if the labels haven't been used before.
-// The values map to the keys (in order) as defined with Must3LabelGauge.
+// With returns a dedicated Gauge for a label combination. The values
+// map to the names (in order) as defined at Must3LabelGauge. With
+// registers a new Gauge if the combination hasn't been used before.
+// Remember that each label combination represents a new time series,
+// which can dramatically increase the amount of data stored.
 func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
-	hash := uint64(14695981039346656037)
+	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
-	hash *= 1099511628211
+	hash *= hashPrime
 	for i := 0; i < len(value1); i++ {
 		hash ^= uint64(value1[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 	hash ^= uint64(len(value2))
-	hash *= 1099511628211
+	hash *= hashPrime
 	for i := 0; i < len(value2); i++ {
 		hash ^= uint64(value2[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 	for i := 0; i < len(value3); i++ {
 		hash ^= uint64(value3[i])
-		hash *= 1099511628211
+		hash *= hashPrime
 	}
 
 	l3.mutex.Lock()
@@ -143,7 +152,7 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	return g
 }
 
-// Must1LabelGauge returns a composition with one fixed label key.
+// Must1LabelGauge returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
