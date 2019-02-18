@@ -12,7 +12,7 @@ import (
 
 const headerLine = "# Prometheus Samples\n"
 
-// HTTPHandler serves all metrics using a simple text-based exposition format.
+// HTTPHandler serves all metrics.
 func HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)
@@ -35,15 +35,14 @@ func WriteText(w io.Writer) {
 	copy(buf, headerLine)
 
 	// snapshot
-	mutex.Lock()
-	view := metrics[:]
-	mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	// reuse to minimise time lookups
 	lineEnd := sampleLineEnd(make([]byte, 21))
 
 	// serialise samples in order of appearance
-	for _, m := range view {
+	for _, m := range metrics {
 		if cap(buf)-len(buf) < 1+len(m.typeComment)+len(m.helpComment) {
 			w.Write(buf)
 			buf = buf[:0]

@@ -1,7 +1,9 @@
 // Package metrics provides atomic measures and Prometheus exposition.
+// The Must functions and Help methods deal with registration. Their use
+// is intended for setup during application launch.
 //
-// Gauge, Counter and Histogram represent live running values and Sample covers
-// captures. Metrics are permanent-the API has no delete.
+// Gauge, Counter and Histogram represent live running values and Sample
+// covers captures. Metrics are permanent-the API has no delete.
 package metrics
 
 import (
@@ -251,7 +253,7 @@ func (m *metric) typeID() byte {
 // Register
 var (
 	// register lock
-	mutex sync.Mutex
+	mutex sync.RWMutex
 	// mapping by name
 	indices = make(map[string]uint32)
 	// consistent order
