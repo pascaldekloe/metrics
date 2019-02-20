@@ -23,7 +23,6 @@ type metric struct {
 	gaugeL3s     []*Map3LabelGauge
 	histogramL1s []*Map1LabelHistogram
 	histogramL2s []*Map2LabelHistogram
-	histogramL3s []*Map3LabelHistogram
 	sampleL1s    []*Map1LabelSample
 	sampleL2s    []*Map2LabelSample
 	sampleL3s    []*Map3LabelSample
@@ -145,6 +144,7 @@ func (r *Register) MustNewHistogram(name string, buckets ...float64) *Histogram 
 	mustValidName(name)
 
 	h := newHistogram(name, buckets)
+	h.prefix(name)
 
 	r.mutex.Lock()
 
@@ -590,20 +590,24 @@ func (r *Register) Must3LabelGauge(name, label1Name, label2Name, label3Name stri
 }
 
 // Must1LabelHistogram returns a composition with one fixed label.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelHistogram(name, labelName string) *Map1LabelHistogram {
-	return std.Must1LabelHistogram(name, labelName)
+func Must1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
+	return std.Must1LabelHistogram(name, labelName, buckets...)
 }
 
 // Must1LabelHistogram returns a composition with one fixed label.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelHistogram(name, labelName string) *Map1LabelHistogram {
+func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -611,7 +615,7 @@ func (r *Register) Must1LabelHistogram(name, labelName string) *Map1LabelHistogr
 
 	var l1 *Map1LabelHistogram
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelHistogram{map1Label: map1Label{
+		l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
@@ -632,7 +636,7 @@ func (r *Register) Must1LabelHistogram(name, labelName string) *Map1LabelHistogr
 			}
 		}
 		if l1 == nil {
-			l1 = &Map1LabelHistogram{map1Label: map1Label{
+			l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
 				name: name, labelName: labelName}}
 			m.histogramL1s = append(m.histogramL1s, l1)
 		}
@@ -648,8 +652,8 @@ func (r *Register) Must1LabelHistogram(name, labelName string) *Map1LabelHistogr
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) the label names do not appear in ascending order.
-func Must2LabelHistogram(name, label1Name, label2Name string) *Map2LabelHistogram {
-	return std.Must2LabelHistogram(name, label1Name, label2Name)
+func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
+	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
 }
 
 // Must2LabelHistogram returns a composition with two fixed labels.
@@ -658,7 +662,7 @@ func Must2LabelHistogram(name, label1Name, label2Name string) *Map2LabelHistogra
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string) *Map2LabelHistogram {
+func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -670,7 +674,7 @@ func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string) *Map
 
 	var l2 *Map2LabelHistogram
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelHistogram{map2Label: map2Label{
+		l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
@@ -691,7 +695,7 @@ func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string) *Map
 			}
 		}
 		if l2 == nil {
-			l2 = &Map2LabelHistogram{map2Label: map2Label{
+			l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
 				name: name, labelNames: [...]string{label1Name, label2Name}}}
 			m.histogramL2s = append(m.histogramL2s, l2)
 		}
@@ -699,66 +703,6 @@ func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string) *Map
 
 	r.mutex.Unlock()
 	return l2
-}
-
-// Must3LabelHistogram returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelHistogram(name, label1Name, label2Name, label3Name string) *Map3LabelHistogram {
-	return std.Must3LabelHistogram(name, label1Name, label2Name, label3Name)
-}
-
-// Must3LabelHistogram returns a composition with three fixed labels.
-// The function panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must3LabelHistogram(name, label1Name, label2Name, label3Name string) *Map3LabelHistogram {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
-
-	r.mutex.Lock()
-
-	var l3 *Map3LabelHistogram
-	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelHistogram{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL3s: []*Map3LabelHistogram{l3},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
-		}
-
-		for _, o := range m.histogramL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
-			}
-		}
-		if l3 == nil {
-			l3 = &Map3LabelHistogram{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.histogramL3s = append(m.histogramL3s, l3)
-		}
-	}
-
-	r.mutex.Unlock()
-	return l3
 }
 
 // Must1LabelCounterSample returns a composition with one fixed label.

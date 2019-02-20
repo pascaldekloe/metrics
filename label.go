@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -90,13 +91,6 @@ type Map2LabelHistogram struct {
 	histograms []*Histogram
 }
 
-// Map3LabelHistogram is a Histogram composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelHistogram simultaneously.
-type Map3LabelHistogram struct {
-	map3Label
-	histograms []*Histogram
-}
-
 // Map1LabelSample is a Sample composition with a fixed label.
 // Multiple goroutines may invoke methods on a Map1LabelSample simultaneously.
 type Map1LabelSample struct {
@@ -179,7 +173,7 @@ func (l2 *Map2LabelCounter) With(value1, value2 string) *Counter {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	c := &Counter{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
+	c := &Counter{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
 	l2.counters = append(l2.counters, c)
 
 	l2.mutex.Unlock()
@@ -222,7 +216,7 @@ func (l3 *Map3LabelCounter) With(value1, value2, value3 string) *Counter {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	c := &Counter{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	c := &Counter{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
 	l3.counters = append(l3.counters, c)
 
 	l3.mutex.Unlock()
@@ -290,7 +284,7 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	g := &Gauge{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
+	g := &Gauge{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
 	l2.gauges = append(l2.gauges, g)
 
 	l2.mutex.Unlock()
@@ -333,7 +327,7 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	g := &Gauge{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	g := &Gauge{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
 	l3.gauges = append(l3.gauges, g)
 
 	l3.mutex.Unlock()
@@ -345,7 +339,7 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 // registers a new Histogram if the label hasn't been used before.
 // Remember that each label represents a new time series,
 // which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelHistogram) With(value string, buckets ...float64) *Histogram {
+func (l1 *Map1LabelHistogram) With(value string) *Histogram {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -364,14 +358,15 @@ func (l1 *Map1LabelHistogram) With(value string, buckets ...float64) *Histogram 
 	}
 
 	l1.labelHashes = append(l1.labelHashes, hash)
-	h := newHistogram(l1.name, buckets)
+	h := newHistogram(l1.name, l1.buckets)
 	l1.histograms = append(l1.histograms, h)
 
-	h.sumPrefix = merge1LabelPrefix(h.sumPrefix, l1.labelName, value)
-	h.countPrefix = merge1LabelPrefix(h.countPrefix, l1.labelName, value)
-	for i, s := range h.bucketPrefixes {
-		h.bucketPrefixes[i] = merge1LabelPrefix(s, l1.labelName, value)
+	for i, f := range h.bucketBounds {
+		h.bucketPrefixes[i] = format2LabelPrefix(l1.name, "le", strconv.FormatFloat(f, 'g', -1, 64), l1.labelName, value)
 	}
+	h.bucketPrefixes[len(h.bucketBounds)] = format2LabelPrefix(l1.name, "le", "+Inf", l1.labelName, value)
+	h.countPrefix = format1LabelPrefix(l1.name+"_count", l1.labelName, value)
+	h.sumPrefix = format1LabelPrefix(l1.name+"_sum", l1.labelName, value)
 
 	l1.mutex.Unlock()
 	return h
@@ -382,7 +377,7 @@ func (l1 *Map1LabelHistogram) With(value string, buckets ...float64) *Histogram 
 // registers a new Histogram if the combination hasn't been used before.
 // Remember that each label combination represents a new time series,
 // which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelHistogram) With(value1, value2 string, buckets ...float64) *Histogram {
+func (l2 *Map2LabelHistogram) With(value1, value2 string) *Histogram {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -407,65 +402,17 @@ func (l2 *Map2LabelHistogram) With(value1, value2 string, buckets ...float64) *H
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	h := newHistogram(l2.name, buckets)
+	h := newHistogram(l2.name, l2.buckets)
 	l2.histograms = append(l2.histograms, h)
 
-	h.sumPrefix = merge2LabelPrefix(h.sumPrefix, &l2.labelNames, value1, value2)
-	h.countPrefix = merge2LabelPrefix(h.countPrefix, &l2.labelNames, value1, value2)
-	for i, s := range h.bucketPrefixes {
-		h.bucketPrefixes[i] = merge2LabelPrefix(s, &l2.labelNames, value1, value2)
+	for i, f := range h.bucketBounds {
+		h.bucketPrefixes[i] = format3LabelPrefix(l2.name, "le", strconv.FormatFloat(f, 'g', -1, 64), l2.labelNames[0], value1, l2.labelNames[1], value2)
 	}
+	h.bucketPrefixes[len(h.bucketBounds)] = format3LabelPrefix(l2.name, "le", "+Inf", l2.labelNames[0], value1, l2.labelNames[1], value2)
+	h.countPrefix = format2LabelPrefix(l2.name+"_count", l2.labelNames[0], value1, l2.labelNames[1], value2)
+	h.sumPrefix = format2LabelPrefix(l2.name+"_sum", l2.labelNames[0], value1, l2.labelNames[1], value2)
 
 	l2.mutex.Unlock()
-	return h
-}
-
-// With returns a dedicated Histogram for a label combination. The values
-// map to the names (in order) as defined at Must3LabelHistogram. With
-// registers a new Histogram if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelHistogram) With(value1, value2, value3 string, buckets ...float64) *Histogram {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	hash ^= uint64(len(value2))
-	hash *= hashPrime
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value3); i++ {
-		hash ^= uint64(value3[i])
-		hash *= hashPrime
-	}
-
-	l3.mutex.Lock()
-
-	for i, h := range l3.labelHashes {
-		if h == hash {
-			hit := l3.histograms[i]
-
-			l3.mutex.Unlock()
-			return hit
-		}
-	}
-
-	l3.labelHashes = append(l3.labelHashes, hash)
-	h := newHistogram(l3.name, buckets)
-	l3.histograms = append(l3.histograms, h)
-
-	h.sumPrefix = merge3LabelPrefix(h.sumPrefix, &l3.labelNames, value1, value2, value3)
-	h.countPrefix = merge3LabelPrefix(h.countPrefix, &l3.labelNames, value1, value2, value3)
-	for i, s := range h.bucketPrefixes {
-		h.bucketPrefixes[i] = merge3LabelPrefix(s, &l3.labelNames, value1, value2, value3)
-	}
-
-	l3.mutex.Unlock()
 	return h
 }
 
@@ -530,7 +477,7 @@ func (l2 *Map2LabelSample) With(value1, value2 string) *Sample {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	s := &Sample{prefix: format2LabelPrefix(l2.name, &l2.labelNames, value1, value2)}
+	s := &Sample{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
 	l2.samples = append(l2.samples, s)
 
 	l2.mutex.Unlock()
@@ -573,7 +520,7 @@ func (l3 *Map3LabelSample) With(value1, value2, value3 string) *Sample {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	s := &Sample{prefix: format3LabelPrefix(l3.name, &l3.labelNames, value1, value2, value3)}
+	s := &Sample{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
 	l3.samples = append(l3.samples, s)
 
 	l3.mutex.Unlock()
@@ -596,17 +543,17 @@ func format1LabelPrefix(name, labelName, labelValue string) string {
 	return buf.String()
 }
 
-func format2LabelPrefix(name string, labelNames *[2]string, labelValue1, labelValue2 string) string {
+func format2LabelPrefix(name string, labelName1, labelValue1, labelName2, labelValue2 string) string {
 	var buf strings.Builder
-	buf.Grow(10 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelValue1) + len(labelValue2))
+	buf.Grow(10 + len(name) + len(labelName1) + len(labelValue1) + len(labelName2) + len(labelValue2))
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
-	buf.WriteString(labelNames[0])
+	buf.WriteString(labelName1)
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(labelNames[1])
+	buf.WriteString(labelName2)
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`"} `)
@@ -614,75 +561,21 @@ func format2LabelPrefix(name string, labelNames *[2]string, labelValue1, labelVa
 	return buf.String()
 }
 
-func format3LabelPrefix(name string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
+func format3LabelPrefix(name string, labelName1, labelValue1, labelName2, labelValue2, labelName3, labelValue3 string) string {
 	var buf strings.Builder
-	buf.Grow(14 + len(name) + len(labelNames[0]) + len(labelNames[1]) + len(labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
+	buf.Grow(14 + len(name) + len(labelName1) + len(labelValue1) + len(labelName2) + len(labelValue2) + len(labelName3) + len(labelValue3))
 
 	buf.WriteString(name)
 	buf.WriteByte('{')
-	buf.WriteString(labelNames[0])
+	buf.WriteString(labelName1)
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(labelNames[1])
+	buf.WriteString(labelName2)
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`",`)
-	buf.WriteString(labelNames[2])
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue3)
-	buf.WriteString(`"} `)
-
-	return buf.String()
-}
-
-func merge1LabelPrefix(prefix, labelName, labelValue string) string {
-	var buf strings.Builder
-	buf.Grow(4 + len(prefix) + len(labelName) + len(labelValue))
-
-	buf.WriteString(prefix[:len(prefix)-2])
-	buf.WriteByte(',')
-	buf.WriteString(labelName)
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue)
-	buf.WriteString(`"} `)
-
-	return buf.String()
-}
-
-func merge2LabelPrefix(prefix string, labelNames *[2]string, labelValue1, labelValue2 string) string {
-	var buf strings.Builder
-	buf.Grow(8 + len(prefix) + len(labelNames[0]) + len(labelNames[1]) + len(labelValue1) + len(labelValue2))
-
-	buf.WriteString(prefix[:len(prefix)-2])
-	buf.WriteByte(',')
-	buf.WriteString(labelNames[0])
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue1)
-	buf.WriteString(`",`)
-	buf.WriteString(labelNames[1])
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue2)
-	buf.WriteString(`"} `)
-
-	return buf.String()
-}
-
-func merge3LabelPrefix(prefix string, labelNames *[3]string, labelValue1, labelValue2, labelValue3 string) string {
-	var buf strings.Builder
-	buf.Grow(12 + len(prefix) + len(labelNames[0]) + len(labelNames[1]) + len(labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
-
-	buf.WriteString(prefix[:len(prefix)-2])
-	buf.WriteByte(',')
-	buf.WriteString(labelNames[0])
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue1)
-	buf.WriteString(`",`)
-	buf.WriteString(labelNames[1])
-	buf.WriteString(`="`)
-	valueEscapes.WriteString(&buf, labelValue2)
-	buf.WriteString(`",`)
-	buf.WriteString(labelNames[2])
+	buf.WriteString(labelName3)
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue3)
 	buf.WriteString(`"} `)

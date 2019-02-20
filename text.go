@@ -59,7 +59,7 @@ func (r *Register) WriteText(w io.Writer) {
 
 	// serialise samples in order of appearance
 	for _, m := range r.metrics {
-		if cap(buf)-len(buf) < 1+len(m.typeComment)+len(m.helpComment) {
+		if cap(buf)-len(buf) < len(m.typeComment)+len(m.helpComment) {
 			w.Write(buf)
 			buf = buf[:0]
 			// need fresh timestamp after Write
@@ -171,15 +171,6 @@ func (r *Register) WriteText(w io.Writer) {
 				l2.mutex.Lock()
 				view := l2.histograms
 				l2.mutex.Unlock()
-				for _, h := range view {
-					buf, lineEnd = h.sample(w, buf, lineEnd)
-					present = true
-				}
-			}
-			for _, l3 := range m.histogramL3s {
-				l3.mutex.Lock()
-				view := l3.histograms
-				l3.mutex.Unlock()
 				for _, h := range view {
 					buf, lineEnd = h.sample(w, buf, lineEnd)
 					present = true

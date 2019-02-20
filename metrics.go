@@ -241,9 +241,13 @@ func newHistogram(name string, buckets []float64) *Histogram {
 	h.hotAndColdBuckets[0] = bothBuckets[:len(buckets)]
 	h.hotAndColdBuckets[1] = bothBuckets[len(buckets):]
 
-	// serialise prefixes only once here
-	h.bucketPrefixes = make([]string, len(buckets), len(buckets)+1)
-	for i, f := range buckets {
+	h.bucketPrefixes = make([]string, len(buckets)+1)
+
+	return h
+}
+
+func (h *Histogram) prefix(name string) {
+	for i, f := range h.bucketBounds {
 		const suffixHead, suffixTail = `{le="`, `"} `
 		var buf strings.Builder
 		buf.Grow(len(name) + len(suffixHead) + maxFloat64Text + len(suffixTail))
@@ -253,9 +257,8 @@ func newHistogram(name string, buckets []float64) *Histogram {
 		buf.WriteString(suffixTail)
 		h.bucketPrefixes[i] = buf.String()
 	}
-	h.bucketPrefixes = append(h.bucketPrefixes, name+`{le="+Inf"} `)
-	h.sumPrefix = name + "_sum "
-	h.countPrefix = name + "_count "
+	h.bucketPrefixes[len(h.bucketBounds)] = name + `{le="+Inf"} `
 
-	return h
+	h.countPrefix = name + "_count "
+	h.sumPrefix = name + "_sum "
 }
