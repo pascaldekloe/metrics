@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"os"
+	"time"
 
 	"github.com/pascaldekloe/metrics"
 )
@@ -44,6 +45,58 @@ func Example() {
 	// db_delay_seconds{le="5e-06"} 3
 	// db_delay_seconds{le="+Inf"} 4
 	// db_delay_seconds_sum 0.00058005654
+}
+
+// Label Assignment And Default Value Initiation
+func Example_labels() {
+	demo := metrics.NewRegister()
+	measured := demo.MustNew1LabelGaugeSample("measured_celcius", "room")
+	setpoint := demo.MustNew1LabelGauge("setpoint_celcius", "room")
+	cycles := demo.MustNew1LabelCounter("cycles_total", "room")
+	heating := demo.MustNew1LabelCounterSample("heating_joules_total", "room")
+
+	rooms := []*struct {
+		Measured *metrics.Sample
+		Setpoint *metrics.Gauge
+		Cycles   *metrics.Counter
+		Heating  *metrics.Sample
+	}{
+		{
+			Measured: measured.With("bedroom"),
+			Setpoint: setpoint.With("bedroom"),
+			Cycles:   cycles.With("bedroom"),
+			Heating:  heating.With("bedroom"),
+		}, {
+			Measured: measured.With("kitchen"),
+			Setpoint: setpoint.With("kitchen"),
+			Cycles:   cycles.With("kitchen"),
+			Heating:  heating.With("kitchen"),
+		},
+	}
+
+	rooms[0].Measured.Set(16.3, time.Date(2019, 2, 20, 17, 59, 46, 0, time.UTC))
+	rooms[0].Setpoint.Set(19)
+	rooms[0].Cycles.Add(1)
+	rooms[0].Heating.Set(1105, time.Date(2019, 2, 20, 17, 59, 47, 0, time.UTC))
+
+	metrics.SkipTimestamp = true
+	demo.WriteText(os.Stdout)
+	// Output:
+	// # Prometheus Samples
+	//
+	// # TYPE measured_celcius gauge
+	// measured_celcius{room="bedroom"} 16.3
+	//
+	// # TYPE setpoint_celcius gauge
+	// setpoint_celcius{room="bedroom"} 19
+	// setpoint_celcius{room="kitchen"} 0
+	//
+	// # TYPE cycles_total counter
+	// cycles_total{room="bedroom"} 1
+	// cycles_total{room="kitchen"} 0
+	//
+	// # TYPE heating_joules_total counter
+	// heating_joules_total{room="bedroom"} 1105
 }
 
 func ExampleMap1LabelHistogram() {

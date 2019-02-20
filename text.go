@@ -71,11 +71,11 @@ func (r *Register) WriteText(w io.Writer) {
 
 		switch m.typeID() {
 		case counterType:
-			var present bool
+			var written bool
 
 			if m.counter != nil {
 				buf, lineEnd = m.counter.sample(w, buf, lineEnd)
-				present = true
+				written = true
 			}
 
 			for _, l1 := range m.counterL1s {
@@ -84,7 +84,7 @@ func (r *Register) WriteText(w io.Writer) {
 				l1.mutex.Unlock()
 				for _, c := range view {
 					buf, lineEnd = c.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 			for _, l2 := range m.counterL2s {
@@ -93,7 +93,7 @@ func (r *Register) WriteText(w io.Writer) {
 				l2.mutex.Unlock()
 				for _, c := range view {
 					buf, lineEnd = c.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 			for _, l3 := range m.counterL3s {
@@ -102,20 +102,20 @@ func (r *Register) WriteText(w io.Writer) {
 				l3.mutex.Unlock()
 				for _, c := range view {
 					buf, lineEnd = c.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 
-			if !present && m.sample != nil {
-				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+			if !written {
+				buf, lineEnd = m.writeSamplesText(w, buf, lineEnd)
 			}
 
 		case gaugeType:
-			var present bool
+			var written bool
 
 			if m.gauge != nil {
 				buf, lineEnd = m.gauge.sample(w, buf, lineEnd)
-				present = true
+				written = true
 			}
 
 			for _, l1 := range m.gaugeL1s {
@@ -124,7 +124,7 @@ func (r *Register) WriteText(w io.Writer) {
 				l1.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 			for _, l2 := range m.gaugeL2s {
@@ -133,7 +133,7 @@ func (r *Register) WriteText(w io.Writer) {
 				l2.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 			for _, l3 := range m.gaugeL3s {
@@ -142,20 +142,20 @@ func (r *Register) WriteText(w io.Writer) {
 				l3.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 
-			if !present && m.sample != nil {
-				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+			if !written {
+				buf, lineEnd = m.writeSamplesText(w, buf, lineEnd)
 			}
 
 		case histogramType:
-			var present bool
+			var written bool
 
 			if m.histogram != nil {
 				buf, lineEnd = m.histogram.sample(w, buf, lineEnd)
-				present = true
+				written = true
 			}
 
 			for _, l1 := range m.histogramL1s {
@@ -164,7 +164,7 @@ func (r *Register) WriteText(w io.Writer) {
 				l1.mutex.Unlock()
 				for _, h := range view {
 					buf, lineEnd = h.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 			for _, l2 := range m.histogramL2s {
@@ -173,11 +173,11 @@ func (r *Register) WriteText(w io.Writer) {
 				l2.mutex.Unlock()
 				for _, h := range view {
 					buf, lineEnd = h.sample(w, buf, lineEnd)
-					present = true
+					written = true
 				}
 			}
 
-			if !present && m.sample != nil {
+			if !written && m.sample != nil {
 				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}
 		}
@@ -186,6 +186,38 @@ func (r *Register) WriteText(w io.Writer) {
 	if len(buf) != 0 {
 		w.Write(buf)
 	}
+}
+
+func (m *metric) writeSamplesText(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if m.sample != nil {
+		buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+	}
+	for _, l1 := range m.sampleL1s {
+		l1.mutex.Lock()
+		view := l1.samples
+		l1.mutex.Unlock()
+		for _, v := range view {
+			buf, lineEnd = v.sample(w, buf, lineEnd)
+		}
+	}
+	for _, l2 := range m.sampleL2s {
+		l2.mutex.Lock()
+		view := l2.samples
+		l2.mutex.Unlock()
+		for _, v := range view {
+			buf, lineEnd = v.sample(w, buf, lineEnd)
+		}
+	}
+	for _, l3 := range m.sampleL3s {
+		l3.mutex.Lock()
+		view := l3.samples
+		l3.mutex.Unlock()
+		for _, v := range view {
+			buf, lineEnd = v.sample(w, buf, lineEnd)
+		}
+	}
+
+	return buf, lineEnd
 }
 
 func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
@@ -328,7 +360,7 @@ func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if value, timestamp := s.Get(); timestamp != 0 {
 		buf = append(buf, s.prefix...)
 		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
-		if SkipTimestamp {
+		if !SkipTimestamp {
 			buf = append(buf, ' ')
 			buf = strconv.AppendUint(buf, timestamp, 10)
 		}
