@@ -10,10 +10,10 @@ func Example() {
 	Thermostat := metrics.MustNewGauge("thermostat_celcius")
 	Thermostat.Set(20)
 
-	Kitchen := metrics.Must1LabelGauge("thermostat_celcius", "room").With("kitchen")
+	Kitchen := metrics.MustNew1LabelGauge("thermostat_celcius", "room").With("kitchen")
 	Kitchen.Set(19)
 
-	Station := metrics.Must2LabelGauge("station_celcius", "city", "source")
+	Station := metrics.MustNew2LabelGauge("station_celcius", "city", "source")
 	Station.With("Amsterdam (Schiphol)", "KNMI").Set(11.2)
 	Station.With("London", "BBC").Set(9.6)
 
@@ -49,7 +49,7 @@ func Example() {
 func ExampleMap1LabelHistogram() {
 	demo := metrics.NewRegister()
 
-	Duration := demo.Must1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
+	Duration := demo.MustNew1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
 	Duration.With("GET").Add(0.0768753)
@@ -82,7 +82,7 @@ func ExampleMap1LabelHistogram() {
 func ExampleMap2LabelHistogram() {
 	demo := metrics.NewRegister()
 
-	Duration := demo.Must2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
+	Duration := demo.MustNew2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
 	Duration.With("GET", "2xx").Add(0.0768753)

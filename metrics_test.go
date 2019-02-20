@@ -16,13 +16,13 @@ func TestHelp(t *testing.T) {
 
 	reg.MustNewGauge("g")
 	reg.MustHelp("g", "set on gauge")
-	reg.Must1LabelGauge("lm", "l")
+	reg.MustNew1LabelGauge("lm", "l")
 	reg.MustHelp("lm", "set on map to override")
-	reg.Must2LabelGauge("lm", "l1", "l2")
+	reg.MustNew2LabelGauge("lm", "l1", "l2")
 	reg.MustHelp("lm", "override on map")
-	reg.Must3LabelGauge("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
+	reg.MustNew3LabelGauge("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
 	reg.MustHelp("lg", "set on labeled gauge to override")
-	reg.Must3LabelGauge("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
+	reg.MustNew3LabelGauge("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
 	reg.MustHelp("lg", "override on labeled gauge")
 
 	want := map[string]string{

@@ -245,21 +245,23 @@ func (r *Register) MustNewCounterSample(name string) *Sample {
 	return s
 }
 
-// Must1LabelCounter returns a composition with one fixed label.
+// MustNew1LabelCounter returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelCounter(name, labelName string) *Map1LabelCounter {
-	return std.Must1LabelCounter(name, labelName)
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelCounter(name, labelName string) *Map1LabelCounter {
+	return std.MustNew1LabelCounter(name, labelName)
 }
 
-// Must1LabelCounter returns a composition with one fixed label.
+// MustNew1LabelCounter returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelCounter(name, labelName string) *Map1LabelCounter {
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelCounter(name, labelName string) *Map1LabelCounter {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -283,38 +285,37 @@ func (r *Register) Must1LabelCounter(name, labelName string) *Map1LabelCounter {
 
 		for _, o := range m.counterL1s {
 			if o.labelName == labelName {
-				l1 = o
-				break
+				panic("metrics: label already in use")
 			}
 		}
-		if l1 == nil {
-			l1 = &Map1LabelCounter{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.counterL1s = append(m.counterL1s, l1)
-		}
+		l1 = &Map1LabelCounter{map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.counterL1s = append(m.counterL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// Must2LabelCounter returns a composition with two fixed labels.
+// MustNew2LabelCounter returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
-	return std.Must2LabelCounter(name, label1Name, label2Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
+	return std.MustNew2LabelCounter(name, label1Name, label2Name)
 }
 
-// Must2LabelCounter returns a composition with two fixed labels.
+// MustNew2LabelCounter returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -342,38 +343,37 @@ func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) *Map2L
 
 		for _, o := range m.counterL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l2 == nil {
-			l2 = &Map2LabelCounter{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.counterL2s = append(m.counterL2s, l2)
-		}
+		l2 = &Map2LabelCounter{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.counterL2s = append(m.counterL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// Must3LabelCounter returns a composition with three fixed labels.
+// MustNew3LabelCounter returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
-	return std.Must3LabelCounter(name, label1Name, label2Name, label3Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
+	return std.MustNew3LabelCounter(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelCounter returns a composition with three fixed labels.
+// MustNew3LabelCounter returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -402,36 +402,35 @@ func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name st
 
 		for _, o := range m.counterL3s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l3 == nil {
-			l3 = &Map3LabelCounter{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.counterL3s = append(m.counterL3s, l3)
-		}
+		l3 = &Map3LabelCounter{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+		m.counterL3s = append(m.counterL3s, l3)
 	}
 
 	r.mutex.Unlock()
 	return l3
 }
 
-// Must1LabelGauge returns a composition with one fixed label.
+// MustNew1LabelGauge returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelGauge(name, labelName string) *Map1LabelGauge {
-	return std.Must1LabelGauge(name, labelName)
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelGauge(name, labelName string) *Map1LabelGauge {
+	return std.MustNew1LabelGauge(name, labelName)
 }
 
-// Must1LabelGauge returns a composition with one fixed label.
+// MustNew1LabelGauge returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelGauge(name, labelName string) *Map1LabelGauge {
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelGauge(name, labelName string) *Map1LabelGauge {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -455,38 +454,37 @@ func (r *Register) Must1LabelGauge(name, labelName string) *Map1LabelGauge {
 
 		for _, o := range m.gaugeL1s {
 			if o.labelName == labelName {
-				l1 = o
-				break
+				panic("metrics: label already in use")
 			}
 		}
-		if l1 == nil {
-			l1 = &Map1LabelGauge{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.gaugeL1s = append(m.gaugeL1s, l1)
-		}
+		l1 = &Map1LabelGauge{map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.gaugeL1s = append(m.gaugeL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// Must2LabelGauge returns a composition with two fixed labels.
+// MustNew2LabelGauge returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
-	return std.Must2LabelGauge(name, label1Name, label2Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
+	return std.MustNew2LabelGauge(name, label1Name, label2Name)
 }
 
-// Must2LabelGauge returns a composition with two fixed labels.
+// MustNew2LabelGauge returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -514,38 +512,37 @@ func (r *Register) Must2LabelGauge(name, label1Name, label2Name string) *Map2Lab
 
 		for _, o := range m.gaugeL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l2 == nil {
-			l2 = &Map2LabelGauge{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.gaugeL2s = append(m.gaugeL2s, l2)
-		}
+		l2 = &Map2LabelGauge{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.gaugeL2s = append(m.gaugeL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// Must3LabelGauge returns a composition with three fixed labels.
+// MustNew3LabelGauge returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
-	return std.Must3LabelGauge(name, label1Name, label2Name, label3Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
+	return std.MustNew3LabelGauge(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelGauge returns a composition with three fixed labels.
+// MustNew3LabelGauge returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -574,40 +571,39 @@ func (r *Register) Must3LabelGauge(name, label1Name, label2Name, label3Name stri
 
 		for _, o := range m.gaugeL3s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l3 == nil {
-			l3 = &Map3LabelGauge{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.gaugeL3s = append(m.gaugeL3s, l3)
-		}
+		l3 = &Map3LabelGauge{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+		m.gaugeL3s = append(m.gaugeL3s, l3)
 	}
 
 	r.mutex.Unlock()
 	return l3
 }
 
-// Must1LabelHistogram returns a composition with one fixed label.
+// MustNew1LabelHistogram returns a composition with one fixed label.
 // Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
-	return std.Must1LabelHistogram(name, labelName, buckets...)
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
+	return std.MustNew1LabelHistogram(name, labelName, buckets...)
 }
 
-// Must1LabelHistogram returns a composition with one fixed label.
+// MustNew1LabelHistogram returns a composition with one fixed label.
 // Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -631,38 +627,37 @@ func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float6
 
 		for _, o := range m.histogramL1s {
 			if o.labelName == labelName {
-				l1 = o
-				break
+				panic("metrics: label already in use")
 			}
 		}
-		if l1 == nil {
-			l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.histogramL1s = append(m.histogramL1s, l1)
-		}
+		l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.histogramL1s = append(m.histogramL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// Must2LabelHistogram returns a composition with two fixed labels.
+// MustNew2LabelHistogram returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
-	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
+	return std.MustNew2LabelHistogram(name, label1Name, label2Name, buckets...)
 }
 
-// Must2LabelHistogram returns a composition with two fixed labels.
+// MustNew2LabelHistogram returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -690,36 +685,35 @@ func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buck
 
 		for _, o := range m.histogramL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l2 == nil {
-			l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.histogramL2s = append(m.histogramL2s, l2)
-		}
+		l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.histogramL2s = append(m.histogramL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// Must1LabelCounterSample returns a composition with one fixed label.
+// MustNew1LabelCounterSample returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelCounterSample(name, labelName string) *Map1LabelSample {
-	return std.Must1LabelCounterSample(name, labelName)
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelCounterSample(name, labelName string) *Map1LabelSample {
+	return std.MustNew1LabelCounterSample(name, labelName)
 }
 
-// Must1LabelCounterSample returns a composition with one fixed label.
+// MustNew1LabelCounterSample returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelCounterSample(name, labelName string) *Map1LabelSample {
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelCounterSample(name, labelName string) *Map1LabelSample {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -743,38 +737,37 @@ func (r *Register) Must1LabelCounterSample(name, labelName string) *Map1LabelSam
 
 		for _, o := range m.sampleL1s {
 			if o.labelName == labelName {
-				l1 = o
-				break
+				panic("metrics: label already in use")
 			}
 		}
-		if l1 == nil {
-			l1 = &Map1LabelSample{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.sampleL1s = append(m.sampleL1s, l1)
-		}
+		l1 = &Map1LabelSample{map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.sampleL1s = append(m.sampleL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// Must2LabelCounterSample returns a composition with two fixed labels.
+// MustNew2LabelCounterSample returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
-	return std.Must2LabelCounterSample(name, label1Name, label2Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
+	return std.MustNew2LabelCounterSample(name, label1Name, label2Name)
 }
 
-// Must2LabelCounterSample returns a composition with two fixed labels.
+// MustNew2LabelCounterSample returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -802,38 +795,37 @@ func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) 
 
 		for _, o := range m.sampleL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l2 == nil {
-			l2 = &Map2LabelSample{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.sampleL2s = append(m.sampleL2s, l2)
-		}
+		l2 = &Map2LabelSample{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.sampleL2s = append(m.sampleL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// Must3LabelCounterSample returns a composition with three fixed labels.
+// MustNew3LabelCounterSample returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	return std.Must3LabelCounterSample(name, label1Name, label2Name, label3Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+	return std.MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelCounterSample returns a composition with three fixed labels.
+// MustNew3LabelCounterSample returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -862,36 +854,35 @@ func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3N
 
 		for _, o := range m.sampleL3s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l3 == nil {
-			l3 = &Map3LabelSample{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.sampleL3s = append(m.sampleL3s, l3)
-		}
+		l3 = &Map3LabelSample{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+		m.sampleL3s = append(m.sampleL3s, l3)
 	}
 
 	r.mutex.Unlock()
 	return l3
 }
 
-// Must1LabelGaugeSample returns a composition with one fixed label.
+// MustNew1LabelGaugeSample returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func Must1LabelGaugeSample(name, labelName string) *Map1LabelSample {
-	return std.Must1LabelGaugeSample(name, labelName)
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelGaugeSample(name, labelName string) *Map1LabelSample {
+	return std.MustNew1LabelGaugeSample(name, labelName)
 }
 
-// Must1LabelGaugeSample returns a composition with one fixed label.
+// MustNew1LabelGaugeSample returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]* or
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*
-func (r *Register) Must1LabelGaugeSample(name, labelName string) *Map1LabelSample {
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelGaugeSample(name, labelName string) *Map1LabelSample {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
@@ -915,38 +906,37 @@ func (r *Register) Must1LabelGaugeSample(name, labelName string) *Map1LabelSampl
 
 		for _, o := range m.sampleL1s {
 			if o.labelName == labelName {
-				l1 = o
-				break
+				panic("metrics: label already in use")
 			}
 		}
-		if l1 == nil {
-			l1 = &Map1LabelSample{map1Label: map1Label{
-				name: name, labelName: labelName}}
-			m.sampleL1s = append(m.sampleL1s, l1)
-		}
+		l1 = &Map1LabelSample{map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.sampleL1s = append(m.sampleL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// Must2LabelGaugeSample returns a composition with two fixed labels.
+// MustNew2LabelGaugeSample returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
-	return std.Must2LabelGaugeSample(name, label1Name, label2Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
+	return std.MustNew2LabelGaugeSample(name, label1Name, label2Name)
 }
 
-// Must2LabelGaugeSample returns a composition with two fixed labels.
+// MustNew2LabelGaugeSample returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -974,38 +964,37 @@ func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) *M
 
 		for _, o := range m.sampleL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				l2 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l2 == nil {
-			l2 = &Map2LabelSample{map2Label: map2Label{
-				name: name, labelNames: [...]string{label1Name, label2Name}}}
-			m.sampleL2s = append(m.sampleL2s, l2)
-		}
+		l2 = &Map2LabelSample{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.sampleL2s = append(m.sampleL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// Must3LabelGaugeSample returns a composition with three fixed labels.
+// MustNew3LabelGaugeSample returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	return std.Must3LabelGaugeSample(name, label1Name, label2Name, label3Name)
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+	return std.MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelGaugeSample returns a composition with three fixed labels.
+// MustNew3LabelGaugeSample returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label names do not appear in ascending order.
-func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -1034,15 +1023,12 @@ func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Nam
 
 		for _, o := range m.sampleL3s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				l3 = o
-				break
+				panic("metrics: labels already in use")
 			}
 		}
-		if l3 == nil {
-			l3 = &Map3LabelSample{map3Label: map3Label{
-				name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-			m.sampleL3s = append(m.sampleL3s, l3)
-		}
+		l3 = &Map3LabelSample{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+		m.sampleL3s = append(m.sampleL3s, l3)
 	}
 
 	r.mutex.Unlock()
