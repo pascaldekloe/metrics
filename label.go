@@ -6,12 +6,6 @@ import (
 	"sync"
 )
 
-// FNV-1a
-const (
-	hashOffset = 14695981039346656037
-	hashPrime  = 1099511628211
-)
-
 type map1Label struct {
 	mutex       sync.Mutex
 	name        string
@@ -105,12 +99,47 @@ type map3LabelSample struct {
 	samples []*Sample
 }
 
-func (l1 *map1LabelCounter) with(value string) *Counter {
+// FNV-1a
+const (
+	hashOffset = 14695981039346656037
+	hashPrime  = 1099511628211
+)
+
+func hash1(value string) uint64 {
 	hash := uint64(hashOffset)
+	hash ^= uint64(len(value))
+	hash *= hashPrime
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
 		hash *= hashPrime
 	}
+	return hash
+}
+
+func hash2(value1, value2 string) uint64 {
+	hash := hash1(value1)
+	hash ^= uint64(len(value2))
+	hash *= hashPrime
+	for i := 0; i < len(value2); i++ {
+		hash ^= uint64(value2[i])
+		hash *= hashPrime
+	}
+	return hash
+}
+
+func hash3(value1, value2, value3 string) uint64 {
+	hash := hash2(value1, value2)
+	hash ^= uint64(len(value3))
+	hash *= hashPrime
+	for i := 0; i < len(value3); i++ {
+		hash ^= uint64(value3[i])
+		hash *= hashPrime
+	}
+	return hash
+}
+
+func (l1 *map1LabelCounter) with(value string) *Counter {
+	hash := hash1(value)
 
 	l1.mutex.Lock()
 
@@ -132,17 +161,7 @@ func (l1 *map1LabelCounter) with(value string) *Counter {
 }
 
 func (l2 *map2LabelCounter) with(value1, value2 string) *Counter {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
+	hash := hash2(value1, value2)
 
 	l2.mutex.Lock()
 
@@ -164,23 +183,7 @@ func (l2 *map2LabelCounter) with(value1, value2 string) *Counter {
 }
 
 func (l3 *map3LabelCounter) with(value1, value2, value3 string) *Counter {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	hash ^= uint64(len(value2))
-	hash *= hashPrime
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value3); i++ {
-		hash ^= uint64(value3[i])
-		hash *= hashPrime
-	}
+	hash := hash3(value1, value2, value3)
 
 	l3.mutex.Lock()
 
@@ -202,11 +205,7 @@ func (l3 *map3LabelCounter) with(value1, value2, value3 string) *Counter {
 }
 
 func (l1 *map1LabelInteger) with(value string) *Integer {
-	hash := uint64(hashOffset)
-	for i := 0; i < len(value); i++ {
-		hash ^= uint64(value[i])
-		hash *= hashPrime
-	}
+	hash := hash1(value)
 
 	l1.mutex.Lock()
 
@@ -228,17 +227,7 @@ func (l1 *map1LabelInteger) with(value string) *Integer {
 }
 
 func (l2 *map2LabelInteger) with(value1, value2 string) *Integer {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
+	hash := hash2(value1, value2)
 
 	l2.mutex.Lock()
 
@@ -260,23 +249,7 @@ func (l2 *map2LabelInteger) with(value1, value2 string) *Integer {
 }
 
 func (l3 *map3LabelInteger) with(value1, value2, value3 string) *Integer {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	hash ^= uint64(len(value2))
-	hash *= hashPrime
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value3); i++ {
-		hash ^= uint64(value3[i])
-		hash *= hashPrime
-	}
+	hash := hash3(value1, value2, value3)
 
 	l3.mutex.Lock()
 
@@ -298,11 +271,7 @@ func (l3 *map3LabelInteger) with(value1, value2, value3 string) *Integer {
 }
 
 func (l1 *map1LabelReal) with(value string) *Real {
-	hash := uint64(hashOffset)
-	for i := 0; i < len(value); i++ {
-		hash ^= uint64(value[i])
-		hash *= hashPrime
-	}
+	hash := hash1(value)
 
 	l1.mutex.Lock()
 
@@ -324,17 +293,7 @@ func (l1 *map1LabelReal) with(value string) *Real {
 }
 
 func (l2 *map2LabelReal) with(value1, value2 string) *Real {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
+	hash := hash2(value1, value2)
 
 	l2.mutex.Lock()
 
@@ -356,23 +315,7 @@ func (l2 *map2LabelReal) with(value1, value2 string) *Real {
 }
 
 func (l3 *map3LabelReal) with(value1, value2, value3 string) *Real {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	hash ^= uint64(len(value2))
-	hash *= hashPrime
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value3); i++ {
-		hash ^= uint64(value3[i])
-		hash *= hashPrime
-	}
+	hash := hash3(value1, value2, value3)
 
 	l3.mutex.Lock()
 
@@ -394,11 +337,7 @@ func (l3 *map3LabelReal) with(value1, value2, value3 string) *Real {
 }
 
 func (l1 *map1LabelHistogram) with(value string) *Histogram {
-	hash := uint64(hashOffset)
-	for i := 0; i < len(value); i++ {
-		hash ^= uint64(value[i])
-		hash *= hashPrime
-	}
+	hash := hash1(value)
 
 	l1.mutex.Lock()
 
@@ -427,17 +366,7 @@ func (l1 *map1LabelHistogram) with(value string) *Histogram {
 }
 
 func (l2 *map2LabelHistogram) with(value1, value2 string) *Histogram {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
+	hash := hash2(value1, value2)
 
 	l2.mutex.Lock()
 
@@ -466,11 +395,7 @@ func (l2 *map2LabelHistogram) with(value1, value2 string) *Histogram {
 }
 
 func (l1 *map1LabelSample) with(value string) *Sample {
-	hash := uint64(hashOffset)
-	for i := 0; i < len(value); i++ {
-		hash ^= uint64(value[i])
-		hash *= hashPrime
-	}
+	hash := hash1(value)
 
 	l1.mutex.Lock()
 
@@ -492,17 +417,7 @@ func (l1 *map1LabelSample) with(value string) *Sample {
 }
 
 func (l2 *map2LabelSample) with(value1, value2 string) *Sample {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
+	hash := hash2(value1, value2)
 
 	l2.mutex.Lock()
 
@@ -524,23 +439,7 @@ func (l2 *map2LabelSample) with(value1, value2 string) *Sample {
 }
 
 func (l3 *map3LabelSample) with(value1, value2, value3 string) *Sample {
-	hash := uint64(hashOffset)
-	hash ^= uint64(len(value1))
-	hash *= hashPrime
-	for i := 0; i < len(value1); i++ {
-		hash ^= uint64(value1[i])
-		hash *= hashPrime
-	}
-	hash ^= uint64(len(value2))
-	hash *= hashPrime
-	for i := 0; i < len(value2); i++ {
-		hash ^= uint64(value2[i])
-		hash *= hashPrime
-	}
-	for i := 0; i < len(value3); i++ {
-		hash ^= uint64(value3[i])
-		hash *= hashPrime
-	}
+	hash := hash3(value1, value2, value3)
 
 	l3.mutex.Lock()
 
