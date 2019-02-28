@@ -99,7 +99,7 @@ func Example_labels() {
 	// heating_joules_total{room="bedroom"} 1105
 }
 
-func ExampleMap1LabelHistogram() {
+func ExampleMust1LabelHistogram() {
 	demo := metrics.NewRegister()
 
 	Duration := demo.Must1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
@@ -132,7 +132,7 @@ func ExampleMap1LabelHistogram() {
 	// http_latency_seconds_sum{method="OPTIONS"} 0.0001414
 }
 
-func ExampleMap2LabelHistogram() {
+func ExampleMust2LabelHistogram() {
 	demo := metrics.NewRegister()
 
 	Duration := demo.Must2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
