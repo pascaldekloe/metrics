@@ -8,17 +8,17 @@ import (
 )
 
 func Example() {
-	Thermostat := metrics.MustNewReal("thermostat_celcius")
+	Thermostat := metrics.MustReal("thermostat_celcius")
 	Thermostat.Set(20)
 
-	Kitchen := metrics.MustNew1LabelReal("thermostat_celcius", "room").With("kitchen")
+	Kitchen := metrics.Must1LabelReal("thermostat_celcius", "room")("kitchen")
 	Kitchen.Set(19)
 
-	Station := metrics.MustNew2LabelReal("station_celcius", "city", "source")
-	Station.With("Amsterdam (Schiphol)", "KNMI").Set(11.2)
-	Station.With("London", "BBC").Set(9.6)
+	Station := metrics.Must2LabelReal("station_celcius", "city", "source")
+	Station("Amsterdam (Schiphol)", "KNMI").Set(11.2)
+	Station("London", "BBC").Set(9.6)
 
-	Delay := metrics.MustNewHistogram("db_delay_seconds", 1e-6, 2e-6, 5e-6)
+	Delay := metrics.MustHistogram("db_delay_seconds", 1e-6, 2e-6, 5e-6)
 	Delay.Add(0.00000391)
 	Delay.Add(0.00000024054)
 	Delay.Add(0.000002198)
@@ -50,10 +50,10 @@ func Example() {
 // Label Assignment And Default Value Initiation
 func Example_labels() {
 	demo := metrics.NewRegister()
-	measured := demo.MustNew1LabelGaugeSample("measured_celcius", "room")
-	setpoint := demo.MustNew1LabelReal("setpoint_celcius", "room")
-	cycles := demo.MustNew1LabelCounter("cycles_total", "room")
-	heating := demo.MustNew1LabelCounterSample("heating_joules_total", "room")
+	measured := demo.Must1LabelGaugeSample("measured_celcius", "room")
+	setpoint := demo.Must1LabelReal("setpoint_celcius", "room")
+	cycles := demo.Must1LabelCounter("cycles_total", "room")
+	heating := demo.Must1LabelCounterSample("heating_joules_total", "room")
 
 	rooms := []*struct {
 		Measured *metrics.Sample
@@ -62,15 +62,15 @@ func Example_labels() {
 		Heating  *metrics.Sample
 	}{
 		{
-			Measured: measured.With("bedroom"),
-			Setpoint: setpoint.With("bedroom"),
-			Cycles:   cycles.With("bedroom"),
-			Heating:  heating.With("bedroom"),
+			Measured: measured("bedroom"),
+			Setpoint: setpoint("bedroom"),
+			Cycles:   cycles("bedroom"),
+			Heating:  heating("bedroom"),
 		}, {
-			Measured: measured.With("kitchen"),
-			Setpoint: setpoint.With("kitchen"),
-			Cycles:   cycles.With("kitchen"),
-			Heating:  heating.With("kitchen"),
+			Measured: measured("kitchen"),
+			Setpoint: setpoint("kitchen"),
+			Cycles:   cycles("kitchen"),
+			Heating:  heating("kitchen"),
 		},
 	}
 
@@ -102,14 +102,14 @@ func Example_labels() {
 func ExampleMap1LabelHistogram() {
 	demo := metrics.NewRegister()
 
-	Duration := demo.MustNew1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
+	Duration := demo.Must1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
-	Duration.With("GET").Add(0.0768753)
-	Duration.With("OPTIONS").Add(0.0001414)
-	Duration.With("GET").Add(0.0022779)
-	Duration.With("GET").Add(0.0018714)
-	Duration.With("GET").Add(0.0023789)
+	Duration("GET").Add(0.0768753)
+	Duration("OPTIONS").Add(0.0001414)
+	Duration("GET").Add(0.0022779)
+	Duration("GET").Add(0.0018714)
+	Duration("GET").Add(0.0023789)
 
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
@@ -135,14 +135,14 @@ func ExampleMap1LabelHistogram() {
 func ExampleMap2LabelHistogram() {
 	demo := metrics.NewRegister()
 
-	Duration := demo.MustNew2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
+	Duration := demo.Must2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
-	Duration.With("GET", "2xx").Add(0.0768753)
-	Duration.With("GET", "3xx").Add(0.0001414)
-	Duration.With("GET", "2xx").Add(0.0022779)
-	Duration.With("GET", "2xx").Add(0.0018714)
-	Duration.With("GET", "2xx").Add(0.0023789)
+	Duration("GET", "2xx").Add(0.0768753)
+	Duration("GET", "3xx").Add(0.0001414)
+	Duration("GET", "2xx").Add(0.0022779)
+	Duration("GET", "2xx").Add(0.0018714)
+	Duration("GET", "2xx").Add(0.0023789)
 
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)

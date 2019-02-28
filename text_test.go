@@ -14,10 +14,10 @@ func TestServeHTTP(t *testing.T) {
 	SkipTimestamp = true
 	reg := NewRegister()
 
-	g1 := reg.MustNewReal("g1")
+	g1 := reg.MustReal("g1")
 	reg.MustHelp("g1", "🆘")
 	g1.Set(42)
-	c1 := reg.MustNewCounter("c1")
+	c1 := reg.MustCounter("c1")
 	c1.Add(1)
 	c1.Add(8)
 	reg.MustHelp("c1", "escape\n… and \\")
@@ -91,43 +91,43 @@ func BenchmarkServeHTTP(b *testing.B) {
 		b.Run(strconv.Itoa(n), func(b *testing.B) {
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewCounter("integer" + strconv.Itoa(i) + "_bench_unit").Add(uint64(i))
+				reg.MustCounter("integer" + strconv.Itoa(i) + "_bench_unit").Add(uint64(i))
 			}
 			b.Run("counter", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewReal("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
+				reg.MustReal("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
 			}
 			b.Run("real", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewInteger("integer" + strconv.Itoa(i) + "_bench_unit").Set(int64(i))
+				reg.MustInteger("integer" + strconv.Itoa(i) + "_bench_unit").Set(int64(i))
 			}
 			b.Run("integer", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", 1, 2, 3, 4).Add(3.14)
+				reg.MustHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", 1, 2, 3, 4).Add(3.14)
 			}
 			b.Run("histogram5", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNew1LabelReal("real"+strconv.Itoa(i)+"_label_bench_unit", "first").With(strconv.Itoa(i % 5)).Set(float64(i))
+				reg.Must1LabelReal("real"+strconv.Itoa(i)+"_label_bench_unit", "first")(strconv.Itoa(i % 5)).Set(float64(i))
 			}
 			b.Run("label5", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNew3LabelReal("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").With(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
+				reg.Must3LabelReal("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third")(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
 			}
 			b.Run("label2x3x5", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewGaugeSample("sample"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
+				reg.MustGaugeSample("sample"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
 			}
 			b.Run("sample", benchmarkHTTPHandler)
 		})

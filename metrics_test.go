@@ -14,15 +14,15 @@ import (
 func TestHelp(t *testing.T) {
 	reg := NewRegister()
 
-	reg.MustNewReal("g")
+	reg.MustReal("g")
 	reg.MustHelp("g", "set on gauge")
-	reg.MustNew1LabelReal("lm", "l")
+	reg.Must1LabelReal("lm", "l")
 	reg.MustHelp("lm", "set on map to override")
-	reg.MustNew2LabelReal("lm", "l1", "l2")
+	reg.Must2LabelReal("lm", "l1", "l2")
 	reg.MustHelp("lm", "override on map")
-	reg.MustNew3LabelReal("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
+	reg.Must3LabelReal("lg", "l1", "l2", "l3")("v1", "v2", "v3")
 	reg.MustHelp("lg", "set on labeled gauge to override")
-	reg.MustNew3LabelReal("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
+	reg.Must3LabelReal("lg", "l4", "l5", "l6")("v4", "v5", "v6")
 	reg.MustHelp("lg", "override on labeled gauge")
 
 	want := map[string]string{
@@ -63,7 +63,7 @@ func TestHelp(t *testing.T) {
 	}
 }
 
-func TestNewHistogramBuckets(t *testing.T) {
+func TestHistogramBuckets(t *testing.T) {
 	reg := NewRegister()
 
 	var golden = []struct {
@@ -77,7 +77,7 @@ func TestNewHistogramBuckets(t *testing.T) {
 	}
 
 	for i, gold := range golden {
-		h := reg.MustNewHistogram("h"+strconv.Itoa(i), gold.feed...)
+		h := reg.MustHistogram("h"+strconv.Itoa(i), gold.feed...)
 		if !reflect.DeepEqual(h.bucketBounds, gold.want) {
 			t.Errorf("%v: got buckets %v, want %v", gold.feed, h.bucketBounds, gold.want)
 		}
@@ -88,7 +88,7 @@ func BenchmarkGet(b *testing.B) {
 	reg := NewRegister()
 
 	b.Run("counter", func(b *testing.B) {
-		c := reg.MustNewCounter("bench_integer_unit")
+		c := reg.MustCounter("bench_integer_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -106,7 +106,7 @@ func BenchmarkGet(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewReal("bench_real_unit")
+		g := reg.MustReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -124,7 +124,7 @@ func BenchmarkGet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := reg.MustNewGaugeSample("bench_sample_unit")
+		s := reg.MustGaugeSample("bench_sample_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -146,7 +146,7 @@ func BenchmarkSet(b *testing.B) {
 	reg := NewRegister()
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewReal("bench_real_unit")
+		g := reg.MustReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -164,7 +164,7 @@ func BenchmarkSet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := reg.MustNewGaugeSample("bench_sample_unit")
+		s := reg.MustGaugeSample("bench_sample_unit")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
@@ -187,7 +187,7 @@ func BenchmarkAdd(b *testing.B) {
 	reg := NewRegister()
 
 	b.Run("counter", func(b *testing.B) {
-		c := reg.MustNewCounter("bench_integer_unit")
+		c := reg.MustCounter("bench_integer_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -205,7 +205,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewInteger("bench_real_unit")
+		g := reg.MustInteger("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -223,7 +223,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("histogram5", func(b *testing.B) {
-		g := reg.MustNewHistogram("bench_histogram_unit", .01, .02, .05, .1)
+		g := reg.MustHistogram("bench_histogram_unit", .01, .02, .05, .1)
 
 		b.Run("sequential", func(b *testing.B) {
 			f := .001

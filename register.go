@@ -16,20 +16,20 @@ type metric struct {
 	histogram *Histogram
 	sample    *Sample
 
-	counterL1s   []*Map1LabelCounter
-	counterL2s   []*Map2LabelCounter
-	counterL3s   []*Map3LabelCounter
-	integerL1s   []*Map1LabelInteger
-	integerL2s   []*Map2LabelInteger
-	integerL3s   []*Map3LabelInteger
-	realL1s      []*Map1LabelReal
-	realL2s      []*Map2LabelReal
-	realL3s      []*Map3LabelReal
-	histogramL1s []*Map1LabelHistogram
-	histogramL2s []*Map2LabelHistogram
-	sampleL1s    []*Map1LabelSample
-	sampleL2s    []*Map2LabelSample
-	sampleL3s    []*Map3LabelSample
+	counterL1s   []*map1LabelCounter
+	counterL2s   []*map2LabelCounter
+	counterL3s   []*map3LabelCounter
+	integerL1s   []*map1LabelInteger
+	integerL2s   []*map2LabelInteger
+	integerL3s   []*map3LabelInteger
+	realL1s      []*map1LabelReal
+	realL2s      []*map2LabelReal
+	realL3s      []*map3LabelReal
+	histogramL1s []*map1LabelHistogram
+	histogramL2s []*map2LabelHistogram
+	sampleL1s    []*map1LabelSample
+	sampleL2s    []*map2LabelSample
+	sampleL3s    []*map3LabelSample
 }
 
 func (m *metric) typeID() byte {
@@ -52,21 +52,21 @@ func NewRegister() *Register {
 	return &Register{indices: make(map[string]uint32)}
 }
 
-// MustNewCounter registers a new Counter. The function panics when name
+// MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
-func MustNewCounter(name string) *Counter {
-	return std.MustNewCounter(name)
+func MustCounter(name string) *Counter {
+	return std.MustCounter(name)
 }
 
-// MustNewCounter registers a new Counter. The function panics when name
+// MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewCounter(name string) *Counter {
+func (r *Register) MustCounter(name string) *Counter {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -90,21 +90,21 @@ func (r *Register) MustNewCounter(name string) *Counter {
 	return m.counter
 }
 
-// MustNewInteger registers a new gauge. The function panics when name
+// MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
-func MustNewInteger(name string) *Integer {
-	return std.MustNewInteger(name)
+func MustInteger(name string) *Integer {
+	return std.MustInteger(name)
 }
 
-// MustNewInteger registers a new gauge. The function panics when name
+// MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewInteger(name string) *Integer {
+func (r *Register) MustInteger(name string) *Integer {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -128,21 +128,21 @@ func (r *Register) MustNewInteger(name string) *Integer {
 	return m.integer
 }
 
-// MustNewReal registers a new gauge. The function panics when name
+// MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
-func MustNewReal(name string) *Real {
-	return std.MustNewReal(name)
+func MustReal(name string) *Real {
+	return std.MustReal(name)
 }
 
-// MustNewReal registers a new gauge. The function panics when name
+// MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewReal(name string) *Real {
+func (r *Register) MustReal(name string) *Real {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -166,21 +166,21 @@ func (r *Register) MustNewReal(name string) *Real {
 	return m.real
 }
 
-// MustNewHistogram registers a new Histogram. Buckets define the upper
+// MustHistogram registers a new Histogram. Buckets define the upper
 // boundaries, preferably in ascending order. Special cases not-a-number
 // and both infinities are ignored.
-// The function panics when name was registered before, or when name
+// Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-func MustNewHistogram(name string, buckets ...float64) *Histogram {
-	return std.MustNewHistogram(name, buckets...)
+func MustHistogram(name string, buckets ...float64) *Histogram {
+	return std.MustHistogram(name, buckets...)
 }
 
-// MustNewHistogram registers a new Histogram. Buckets define the upper
+// MustHistogram registers a new Histogram. Buckets define the upper
 // boundaries, preferably in ascending order. Special cases not-a-number
 // and both infinities are ignored.
-// The function panics when name was registered before, or when name
+// Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-func (r *Register) MustNewHistogram(name string, buckets ...float64) *Histogram {
+func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 	mustValidName(name)
 
 	h := newHistogram(name, buckets)
@@ -207,21 +207,21 @@ func (r *Register) MustNewHistogram(name string, buckets ...float64) *Histogram 
 	return h
 }
 
-// MustNewGaugeSample registers a new Sample. The function panics when name
+// MustGaugeSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
-func MustNewGaugeSample(name string) *Sample {
-	return MustNewGaugeSample(name)
+func MustGaugeSample(name string) *Sample {
+	return MustGaugeSample(name)
 }
 
-// MustNewGaugeSample registers a new Sample. The function panics when name
+// MustGaugeSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewGaugeSample(name string) *Sample {
+func (r *Register) MustGaugeSample(name string) *Sample {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -245,21 +245,21 @@ func (r *Register) MustNewGaugeSample(name string) *Sample {
 	return m.sample
 }
 
-// MustNewCounterSample registers a new Sample. The function panics when name
+// MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
-func MustNewCounterSample(name string) *Sample {
-	return std.MustNewCounterSample(name)
+func MustCounterSample(name string) *Sample {
+	return std.MustCounterSample(name)
 }
 
-// MustNewCounterSample registers a new Sample. The function panics when name
+// MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewCounterSample(name string) *Sample {
+func (r *Register) MustCounterSample(name string) *Sample {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -283,37 +283,45 @@ func (r *Register) MustNewCounterSample(name string) *Sample {
 	return m.sample
 }
 
-// MustNew1LabelCounter returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelCounter(name, labelName string) *Map1LabelCounter {
-	return std.MustNew1LabelCounter(name, labelName)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
+	return std.Must1LabelCounter(name, labelName)
 }
 
-// MustNew1LabelCounter returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelCounter(name, labelName string) *Map1LabelCounter {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelCounter
+	var l1 *map1LabelCounter
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelCounter{map1Label: map1Label{
+		l1 = &map1LabelCounter{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL1s:  []*Map1LabelCounter{l1},
+			counterL1s:  []*map1LabelCounter{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -326,34 +334,42 @@ func (r *Register) MustNew1LabelCounter(name, labelName string) *Map1LabelCounte
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelCounter{map1Label: map1Label{
+		l1 = &map1LabelCounter{map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.counterL1s = append(m.counterL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelCounter returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
-	return std.MustNew2LabelCounter(name, label1Name, label2Name)
+// (5) the label names are already in use.
+func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
+	return std.Must2LabelCounter(name, label1Name, label2Name)
 }
 
-// MustNew2LabelCounter returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelCounter(name, label1Name, label2Name string) *Map2LabelCounter {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -363,15 +379,15 @@ func (r *Register) MustNew2LabelCounter(name, label1Name, label2Name string) *Ma
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelCounter
+	var l2 *map2LabelCounter
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelCounter{map2Label: map2Label{
+		l2 = &map2LabelCounter{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL2s:  []*Map2LabelCounter{l2},
+			counterL2s:  []*map2LabelCounter{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -384,34 +400,42 @@ func (r *Register) MustNew2LabelCounter(name, label1Name, label2Name string) *Ma
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelCounter{map2Label: map2Label{
+		l2 = &map2LabelCounter{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.counterL2s = append(m.counterL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew3LabelCounter returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
-	return std.MustNew3LabelCounter(name, label1Name, label2Name, label3Name)
+// (5) the label names are already in use.
+func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
+	return std.Must3LabelCounter(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelCounter returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelCounter returns a function which assigns dedicated Counter
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Counter represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew3LabelCounter(name, label1Name, label2Name, label3Name string) *Map3LabelCounter {
+// (5) the label names are already in use.
+func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -422,15 +446,15 @@ func (r *Register) MustNew3LabelCounter(name, label1Name, label2Name, label3Name
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelCounter
+	var l3 *map3LabelCounter
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelCounter{map3Label: map3Label{
+		l3 = &map3LabelCounter{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL3s:  []*Map3LabelCounter{l3},
+			counterL3s:  []*map3LabelCounter{l3},
 		})
 	} else {
 		m := r.metrics[index]
@@ -443,46 +467,54 @@ func (r *Register) MustNew3LabelCounter(name, label1Name, label2Name, label3Name
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelCounter{map3Label: map3Label{
+		l3 = &map3LabelCounter{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 		m.counterL3s = append(m.counterL3s, l3)
 	}
 
 	r.mutex.Unlock()
-	return l3
+	return l3.with
 }
 
-// MustNew1LabelInteger returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelInteger(name, labelName string) *Map1LabelInteger {
-	return std.MustNew1LabelInteger(name, labelName)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
+	return std.Must1LabelInteger(name, labelName)
 }
 
-// MustNew1LabelInteger returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelInteger(name, labelName string) *Map1LabelInteger {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelInteger
+	var l1 *map1LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelInteger{map1Label: map1Label{
+		l1 = &map1LabelInteger{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL1s:  []*Map1LabelInteger{l1},
+			integerL1s:  []*map1LabelInteger{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -495,34 +527,42 @@ func (r *Register) MustNew1LabelInteger(name, labelName string) *Map1LabelIntege
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelInteger{map1Label: map1Label{
+		l1 = &map1LabelInteger{map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.integerL1s = append(m.integerL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelInteger returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelInteger(name, label1Name, label2Name string) *Map2LabelInteger {
-	return std.MustNew2LabelInteger(name, label1Name, label2Name)
+// (5) the label names are already in use.
+func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
+	return std.Must2LabelInteger(name, label1Name, label2Name)
 }
 
-// MustNew2LabelInteger returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelInteger(name, label1Name, label2Name string) *Map2LabelInteger {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -532,15 +572,15 @@ func (r *Register) MustNew2LabelInteger(name, label1Name, label2Name string) *Ma
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelInteger
+	var l2 *map2LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelInteger{map2Label: map2Label{
+		l2 = &map2LabelInteger{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL2s:  []*Map2LabelInteger{l2},
+			integerL2s:  []*map2LabelInteger{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -553,34 +593,42 @@ func (r *Register) MustNew2LabelInteger(name, label1Name, label2Name string) *Ma
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelInteger{map2Label: map2Label{
+		l2 = &map2LabelInteger{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.integerL2s = append(m.integerL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew3LabelInteger returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew3LabelInteger(name, label1Name, label2Name, label3Name string) *Map3LabelInteger {
-	return std.MustNew3LabelInteger(name, label1Name, label2Name, label3Name)
+// (5) the label names are already in use.
+func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
+	return std.Must3LabelInteger(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelInteger returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelInteger returns a function which assigns dedicated Integer
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Integer represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew3LabelInteger(name, label1Name, label2Name, label3Name string) *Map3LabelInteger {
+// (5) the label names are already in use.
+func (r *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -591,15 +639,15 @@ func (r *Register) MustNew3LabelInteger(name, label1Name, label2Name, label3Name
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelInteger
+	var l3 *map3LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelInteger{map3Label: map3Label{
+		l3 = &map3LabelInteger{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL3s:  []*Map3LabelInteger{l3},
+			integerL3s:  []*map3LabelInteger{l3},
 		})
 	} else {
 		m := r.metrics[index]
@@ -612,46 +660,54 @@ func (r *Register) MustNew3LabelInteger(name, label1Name, label2Name, label3Name
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelInteger{map3Label: map3Label{
+		l3 = &map3LabelInteger{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 		m.integerL3s = append(m.integerL3s, l3)
 	}
 
 	r.mutex.Unlock()
-	return l3
+	return l3.with
 }
 
-// MustNew1LabelReal returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelReal(name, labelName string) *Map1LabelReal {
-	return std.MustNew1LabelReal(name, labelName)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelReal(name, labelName string) func(labelValue string) *Real {
+	return std.Must1LabelReal(name, labelName)
 }
 
-// MustNew1LabelReal returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelReal(name, labelName string) *Map1LabelReal {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelReal
+	var l1 *map1LabelReal
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelReal{map1Label: map1Label{
+		l1 = &map1LabelReal{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL1s:     []*Map1LabelReal{l1},
+			realL1s:     []*map1LabelReal{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -664,34 +720,42 @@ func (r *Register) MustNew1LabelReal(name, labelName string) *Map1LabelReal {
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelReal{map1Label: map1Label{
+		l1 = &map1LabelReal{map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.realL1s = append(m.realL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelReal returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelReal(name, label1Name, label2Name string) *Map2LabelReal {
-	return std.MustNew2LabelReal(name, label1Name, label2Name)
+// (5) the label names are already in use.
+func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
+	return std.Must2LabelReal(name, label1Name, label2Name)
 }
 
-// MustNew2LabelReal returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelReal(name, label1Name, label2Name string) *Map2LabelReal {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -701,15 +765,15 @@ func (r *Register) MustNew2LabelReal(name, label1Name, label2Name string) *Map2L
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelReal
+	var l2 *map2LabelReal
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelReal{map2Label: map2Label{
+		l2 = &map2LabelReal{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL2s:     []*Map2LabelReal{l2},
+			realL2s:     []*map2LabelReal{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -722,34 +786,42 @@ func (r *Register) MustNew2LabelReal(name, label1Name, label2Name string) *Map2L
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelReal{map2Label: map2Label{
+		l2 = &map2LabelReal{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.realL2s = append(m.realL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew3LabelReal returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew3LabelReal(name, label1Name, label2Name, label3Name string) *Map3LabelReal {
-	return std.MustNew3LabelReal(name, label1Name, label2Name, label3Name)
+// (5) the label names are already in use.
+func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
+	return std.Must3LabelReal(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelReal returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelReal returns a function which assigns dedicated Real
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Real represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew3LabelReal(name, label1Name, label2Name, label3Name string) *Map3LabelReal {
+// (5) the label names are already in use.
+func (r *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -760,15 +832,15 @@ func (r *Register) MustNew3LabelReal(name, label1Name, label2Name, label3Name st
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelReal
+	var l3 *map3LabelReal
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelReal{map3Label: map3Label{
+		l3 = &map3LabelReal{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL3s:     []*Map3LabelReal{l3},
+			realL3s:     []*map3LabelReal{l3},
 		})
 	} else {
 		m := r.metrics[index]
@@ -781,50 +853,58 @@ func (r *Register) MustNew3LabelReal(name, label1Name, label2Name, label3Name st
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelReal{map3Label: map3Label{
+		l3 = &map3LabelReal{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 		m.realL3s = append(m.realL3s, l3)
 	}
 
 	r.mutex.Unlock()
-	return l3
+	return l3.with
 }
 
-// MustNew1LabelHistogram returns a composition with one fixed label.
+// Must1LabelHistogram returns a function which assigns dedicated Histogram
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
 // Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
-// The function panics on any of the following:
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
-	return std.MustNew1LabelHistogram(name, labelName, buckets...)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
+	return std.Must1LabelHistogram(name, labelName, buckets...)
 }
 
-// MustNew1LabelHistogram returns a composition with one fixed label.
+// Must1LabelHistogram returns a function which assigns dedicated Histogram
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
 // Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
-// The function panics on any of the following:
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelHistogram(name, labelName string, buckets ...float64) *Map1LabelHistogram {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelHistogram
+	var l1 *map1LabelHistogram
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
+		l1 = &map1LabelHistogram{buckets: buckets, map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL1s: []*Map1LabelHistogram{l1},
+			histogramL1s: []*map1LabelHistogram{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -837,34 +917,46 @@ func (r *Register) MustNew1LabelHistogram(name, labelName string, buckets ...flo
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelHistogram{buckets: buckets, map1Label: map1Label{
+		l1 = &map1LabelHistogram{buckets: buckets, map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.histogramL1s = append(m.histogramL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelHistogram returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelHistogram returns a function which assigns dedicated Histogram
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
-	return std.MustNew2LabelHistogram(name, label1Name, label2Name, buckets...)
+// (5) the label names are already in use.
+func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
+	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
 }
 
-// MustNew2LabelHistogram returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelHistogram returns a function which assigns dedicated Histogram
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) *Map2LabelHistogram {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -874,15 +966,15 @@ func (r *Register) MustNew2LabelHistogram(name, label1Name, label2Name string, b
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelHistogram
+	var l2 *map2LabelHistogram
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
+		l2 = &map2LabelHistogram{buckets: buckets, map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL2s: []*Map2LabelHistogram{l2},
+			histogramL2s: []*map2LabelHistogram{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -895,46 +987,54 @@ func (r *Register) MustNew2LabelHistogram(name, label1Name, label2Name string, b
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelHistogram{buckets: buckets, map2Label: map2Label{
+		l2 = &map2LabelHistogram{buckets: buckets, map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.histogramL2s = append(m.histogramL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew1LabelCounterSample returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelCounterSample(name, labelName string) *Map1LabelSample {
-	return std.MustNew1LabelCounterSample(name, labelName)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
+	return std.Must1LabelCounterSample(name, labelName)
 }
 
-// MustNew1LabelCounterSample returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelCounterSample(name, labelName string) *Map1LabelSample {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelSample
+	var l1 *map1LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelSample{map1Label: map1Label{
+		l1 = &map1LabelSample{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL1s:   []*Map1LabelSample{l1},
+			sampleL1s:   []*map1LabelSample{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -947,34 +1047,42 @@ func (r *Register) MustNew1LabelCounterSample(name, labelName string) *Map1Label
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelSample{map1Label: map1Label{
+		l1 = &map1LabelSample{map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.sampleL1s = append(m.sampleL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelCounterSample returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
-	return std.MustNew2LabelCounterSample(name, label1Name, label2Name)
+// (5) the label names are already in use.
+func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+	return std.Must2LabelCounterSample(name, label1Name, label2Name)
 }
 
-// MustNew2LabelCounterSample returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelCounterSample(name, label1Name, label2Name string) *Map2LabelSample {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -984,15 +1092,15 @@ func (r *Register) MustNew2LabelCounterSample(name, label1Name, label2Name strin
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelSample
+	var l2 *map2LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelSample{map2Label: map2Label{
+		l2 = &map2LabelSample{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL2s:   []*Map2LabelSample{l2},
+			sampleL2s:   []*map2LabelSample{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -1005,34 +1113,42 @@ func (r *Register) MustNew2LabelCounterSample(name, label1Name, label2Name strin
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelSample{map2Label: map2Label{
+		l2 = &map2LabelSample{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.sampleL2s = append(m.sampleL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew3LabelCounterSample returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	return std.MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name)
+// (5) the label names are already in use.
+func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+	return std.Must3LabelCounterSample(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelCounterSample returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelCounterSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew3LabelCounterSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+// (5) the label names are already in use.
+func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -1043,15 +1159,15 @@ func (r *Register) MustNew3LabelCounterSample(name, label1Name, label2Name, labe
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelSample
+	var l3 *map3LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelSample{map3Label: map3Label{
+		l3 = &map3LabelSample{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL3s:   []*Map3LabelSample{l3},
+			sampleL3s:   []*map3LabelSample{l3},
 		})
 	} else {
 		m := r.metrics[index]
@@ -1064,46 +1180,54 @@ func (r *Register) MustNew3LabelCounterSample(name, label1Name, label2Name, labe
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelSample{map3Label: map3Label{
+		l3 = &map3LabelSample{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 		m.sampleL3s = append(m.sampleL3s, l3)
 	}
 
 	r.mutex.Unlock()
-	return l3
+	return l3.with
 }
 
-// MustNew1LabelGaugeSample returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func MustNew1LabelGaugeSample(name, labelName string) *Map1LabelSample {
-	return std.MustNew1LabelGaugeSample(name, labelName)
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
+	return std.Must1LabelGaugeSample(name, labelName)
 }
 
-// MustNew1LabelGaugeSample returns a composition with one fixed label.
-// The function panics on any of the following:
+// Must1LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) the label is already in use.
-func (r *Register) MustNew1LabelGaugeSample(name, labelName string) *Map1LabelSample {
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (r *Register) Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelSample
+	var l1 *map1LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelSample{map1Label: map1Label{
+		l1 = &map1LabelSample{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL1s:   []*Map1LabelSample{l1},
+			sampleL1s:   []*map1LabelSample{l1},
 		})
 	} else {
 		m := r.metrics[index]
@@ -1116,34 +1240,42 @@ func (r *Register) MustNew1LabelGaugeSample(name, labelName string) *Map1LabelSa
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelSample{map1Label: map1Label{
+		l1 = &map1LabelSample{map1Label: map1Label{
 			name: name, labelName: labelName}}
 		m.sampleL1s = append(m.sampleL1s, l1)
 	}
 
 	r.mutex.Unlock()
-	return l1
+	return l1.with
 }
 
-// MustNew2LabelGaugeSample returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
-	return std.MustNew2LabelGaugeSample(name, label1Name, label2Name)
+// (5) the label names are already in use.
+func Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+	return std.Must2LabelGaugeSample(name, label1Name, label2Name)
 }
 
-// MustNew2LabelGaugeSample returns a composition with two fixed labels.
-// The function panics on any of the following:
+// Must2LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew2LabelGaugeSample(name, label1Name, label2Name string) *Map2LabelSample {
+// (5) the label names are already in use.
+func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -1153,15 +1285,15 @@ func (r *Register) MustNew2LabelGaugeSample(name, label1Name, label2Name string)
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelSample
+	var l2 *map2LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelSample{map2Label: map2Label{
+		l2 = &map2LabelSample{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL2s:   []*Map2LabelSample{l2},
+			sampleL2s:   []*map2LabelSample{l2},
 		})
 	} else {
 		m := r.metrics[index]
@@ -1174,34 +1306,42 @@ func (r *Register) MustNew2LabelGaugeSample(name, label1Name, label2Name string)
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelSample{map2Label: map2Label{
+		l2 = &map2LabelSample{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 		m.sampleL2s = append(m.sampleL2s, l2)
 	}
 
 	r.mutex.Unlock()
-	return l2
+	return l2.with
 }
 
-// MustNew3LabelGaugeSample returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
-	return std.MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name)
+// (5) the label names are already in use.
+func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+	return std.Must3LabelGaugeSample(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelGaugeSample returns a composition with three fixed labels.
-// The function panics on any of the following:
+// Must3LabelGaugeSample returns a function which assigns dedicated Sample
+// instances to each label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Sample represents a new time
+// series, which can dramatically increase the amount of data stored.
+//
+// Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
-// (5) the labels are already in use.
-func (r *Register) MustNew3LabelGaugeSample(name, label1Name, label2Name, label3Name string) *Map3LabelSample {
+// (5) the label names are already in use.
+func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -1212,15 +1352,15 @@ func (r *Register) MustNew3LabelGaugeSample(name, label1Name, label2Name, label3
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelSample
+	var l3 *map3LabelSample
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelSample{map3Label: map3Label{
+		l3 = &map3LabelSample{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL3s:   []*Map3LabelSample{l3},
+			sampleL3s:   []*map3LabelSample{l3},
 		})
 	} else {
 		m := r.metrics[index]
@@ -1233,13 +1373,13 @@ func (r *Register) MustNew3LabelGaugeSample(name, label1Name, label2Name, label3
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelSample{map3Label: map3Label{
+		l3 = &map3LabelSample{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 		m.sampleL3s = append(m.sampleL3s, l3)
 	}
 
 	r.mutex.Unlock()
-	return l3
+	return l3.with
 }
 
 func mustValidName(s string) {

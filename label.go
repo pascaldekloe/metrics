@@ -33,112 +33,79 @@ type map3Label struct {
 	labelHashes []uint64
 }
 
-// Map1LabelCounter is a Counter composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelCounter simultaneously.
-type Map1LabelCounter struct {
+type map1LabelCounter struct {
 	map1Label
 	counters []*Counter
 }
 
-// Map2LabelCounter is a Counter composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelCounter simultaneously.
-type Map2LabelCounter struct {
+type map2LabelCounter struct {
 	map2Label
 	counters []*Counter
 }
 
-// Map3LabelCounter is a Counter composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelCounter simultaneously.
-type Map3LabelCounter struct {
+type map3LabelCounter struct {
 	map3Label
 	counters []*Counter
 }
 
-// Map1LabelInteger is a Integer composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelInteger simultaneously.
-type Map1LabelInteger struct {
+type map1LabelInteger struct {
 	map1Label
 	integers []*Integer
 }
 
-// Map2LabelInteger is a Integer composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelInteger simultaneously.
-type Map2LabelInteger struct {
+type map2LabelInteger struct {
 	map2Label
 	integers []*Integer
 }
 
-// Map3LabelInteger is a Integer composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelInteger simultaneously.
-type Map3LabelInteger struct {
+type map3LabelInteger struct {
 	map3Label
 	integers []*Integer
 }
 
-// Map1LabelReal is a Real composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelReal simultaneously.
-type Map1LabelReal struct {
+type map1LabelReal struct {
 	map1Label
 	reals []*Real
 }
 
-// Map2LabelReal is a Real composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelReal simultaneously.
-type Map2LabelReal struct {
+type map2LabelReal struct {
 	map2Label
 	reals []*Real
 }
 
-// Map3LabelReal is a Real composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelReal simultaneously.
-type Map3LabelReal struct {
+type map3LabelReal struct {
 	map3Label
 	reals []*Real
 }
 
-// Map1LabelHistogram is a Histogram composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelHistogram simultaneously.
-type Map1LabelHistogram struct {
+type map1LabelHistogram struct {
 	map1Label
 	buckets    []float64
 	histograms []*Histogram
 }
 
-// Map2LabelHistogram is a Histogram composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelHistogram simultaneously.
-type Map2LabelHistogram struct {
+type map2LabelHistogram struct {
 	map2Label
 	buckets    []float64
 	histograms []*Histogram
 }
 
-// Map1LabelSample is a Sample composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelSample simultaneously.
-type Map1LabelSample struct {
+type map1LabelSample struct {
 	map1Label
 	samples []*Sample
 }
 
-// Map2LabelSample is a Sample composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelSample simultaneously.
-type Map2LabelSample struct {
+type map2LabelSample struct {
 	map2Label
 	samples []*Sample
 }
 
-// Map3LabelSample is a Sample composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelSample simultaneously.
-type Map3LabelSample struct {
+type map3LabelSample struct {
 	map3Label
 	samples []*Sample
 }
 
-// With returns a dedicated Counter for a label. The value
-// maps to the name as defined at Must2LabelCounter. With
-// registers a new Counter if the label hasn't been used before.
-// Remember that each label represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelCounter) With(value string) *Counter {
+func (l1 *map1LabelCounter) with(value string) *Counter {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -164,12 +131,7 @@ func (l1 *Map1LabelCounter) With(value string) *Counter {
 	return c
 }
 
-// With returns a dedicated Counter for a label combination. The values
-// map to the names (in order) as defined at Must2LabelCounter. With
-// registers a new Counter if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelCounter) With(value1, value2 string) *Counter {
+func (l2 *map2LabelCounter) with(value1, value2 string) *Counter {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -201,12 +163,7 @@ func (l2 *Map2LabelCounter) With(value1, value2 string) *Counter {
 	return c
 }
 
-// With returns a dedicated Counter for a label combination. The values
-// map to the names (in order) as defined at Must3LabelCounter. With
-// registers a new Counter if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelCounter) With(value1, value2, value3 string) *Counter {
+func (l3 *map3LabelCounter) with(value1, value2, value3 string) *Counter {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -244,12 +201,7 @@ func (l3 *Map3LabelCounter) With(value1, value2, value3 string) *Counter {
 	return c
 }
 
-// With returns a dedicated Integer for a label. The value
-// maps to the name as defined at Must2LabelInteger. With
-// registers a new Integer if the label hasn't been used before.
-// Remember that each label represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelInteger) With(value string) *Integer {
+func (l1 *map1LabelInteger) with(value string) *Integer {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -275,12 +227,7 @@ func (l1 *Map1LabelInteger) With(value string) *Integer {
 	return z
 }
 
-// With returns a dedicated Integer for a label combination. The values
-// map to the names (in order) as defined at Must2LabelInteger. With
-// registers a new Integer if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelInteger) With(value1, value2 string) *Integer {
+func (l2 *map2LabelInteger) with(value1, value2 string) *Integer {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -312,12 +259,7 @@ func (l2 *Map2LabelInteger) With(value1, value2 string) *Integer {
 	return z
 }
 
-// With returns a dedicated Integer for a label combination. The values
-// map to the names (in order) as defined at Must3LabelInteger. With
-// registers a new Integer if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelInteger) With(value1, value2, value3 string) *Integer {
+func (l3 *map3LabelInteger) with(value1, value2, value3 string) *Integer {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -355,12 +297,7 @@ func (l3 *Map3LabelInteger) With(value1, value2, value3 string) *Integer {
 	return z
 }
 
-// With returns a dedicated Real for a label. The value
-// maps to the name as defined at Must2LabelReal. With
-// registers a new Real if the label hasn't been used before.
-// Remember that each label represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelReal) With(value string) *Real {
+func (l1 *map1LabelReal) with(value string) *Real {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -386,12 +323,7 @@ func (l1 *Map1LabelReal) With(value string) *Real {
 	return r
 }
 
-// With returns a dedicated Real for a label combination. The values
-// map to the names (in order) as defined at Must2LabelReal. With
-// registers a new Real if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelReal) With(value1, value2 string) *Real {
+func (l2 *map2LabelReal) with(value1, value2 string) *Real {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -423,12 +355,7 @@ func (l2 *Map2LabelReal) With(value1, value2 string) *Real {
 	return r
 }
 
-// With returns a dedicated Real for a label combination. The values
-// map to the names (in order) as defined at Must3LabelReal. With
-// registers a new Real if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelReal) With(value1, value2, value3 string) *Real {
+func (l3 *map3LabelReal) with(value1, value2, value3 string) *Real {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -466,12 +393,7 @@ func (l3 *Map3LabelReal) With(value1, value2, value3 string) *Real {
 	return r
 }
 
-// With returns a dedicated Histogram for a label. The value
-// maps to the name as defined at Must2LabelHistogram. With
-// registers a new Histogram if the label hasn't been used before.
-// Remember that each label represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelHistogram) With(value string) *Histogram {
+func (l1 *map1LabelHistogram) with(value string) *Histogram {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -504,12 +426,7 @@ func (l1 *Map1LabelHistogram) With(value string) *Histogram {
 	return h
 }
 
-// With returns a dedicated Histogram for a label combination. The values
-// map to the names (in order) as defined at Must2LabelHistogram. With
-// registers a new Histogram if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelHistogram) With(value1, value2 string) *Histogram {
+func (l2 *map2LabelHistogram) with(value1, value2 string) *Histogram {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -548,12 +465,7 @@ func (l2 *Map2LabelHistogram) With(value1, value2 string) *Histogram {
 	return h
 }
 
-// With returns a dedicated Sample for a label. The value
-// maps to the name as defined at Must2LabelSample. With
-// registers a new Sample if the label hasn't been used before.
-// Remember that each label represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelSample) With(value string) *Sample {
+func (l1 *map1LabelSample) with(value string) *Sample {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -579,12 +491,7 @@ func (l1 *Map1LabelSample) With(value string) *Sample {
 	return s
 }
 
-// With returns a dedicated Sample for a label combination. The values
-// map to the names (in order) as defined at Must2LabelSample. With
-// registers a new Sample if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelSample) With(value1, value2 string) *Sample {
+func (l2 *map2LabelSample) with(value1, value2 string) *Sample {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -616,12 +523,7 @@ func (l2 *Map2LabelSample) With(value1, value2 string) *Sample {
 	return s
 }
 
-// With returns a dedicated Sample for a label combination. The values
-// map to the names (in order) as defined at Must3LabelSample. With
-// registers a new Sample if the combination hasn't been used before.
-// Remember that each label combination represents a new time series,
-// which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelSample) With(value1, value2, value3 string) *Sample {
+func (l3 *map3LabelSample) with(value1, value2, value3 string) *Sample {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime

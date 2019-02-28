@@ -2,19 +2,19 @@ package metrics
 
 import "testing"
 
-func BenchmarkLabelWith(b *testing.B) {
+func BenchmarkLabel(b *testing.B) {
 	reg := NewRegister()
 
-	values := [...]string{"first", "second", "third", "fourth"}
-	g1 := reg.MustNew1LabelReal("bench_label_unit", "first")
-	g2 := reg.MustNew2LabelReal("bench_label_unit", "first", "second")
-	g3 := reg.MustNew3LabelReal("bench_label_unit", "first", "second", "third")
+	values := [...]string{"one", "two", "three", "four"}
+	label1 := reg.Must1LabelReal("bench_label_unit", "first")
+	label2 := reg.Must2LabelReal("bench_label_unit", "first", "second")
+	label3 := reg.Must3LabelReal("bench_label_unit", "first", "second", "third")
 
 	b.Run("sequential", func(b *testing.B) {
 		b.Run("4", func(b *testing.B) {
 			for i := 0; i < b.N; i += 4 {
 				for _, v := range values {
-					g1.With(v)
+					label1(v)
 				}
 			}
 		})
@@ -22,7 +22,7 @@ func BenchmarkLabelWith(b *testing.B) {
 			for i := 0; i < b.N; i += 4 * 4 {
 				for _, v1 := range values {
 					for _, v2 := range values {
-						g2.With(v1, v2)
+						label2(v1, v2)
 					}
 				}
 			}
@@ -32,7 +32,7 @@ func BenchmarkLabelWith(b *testing.B) {
 				for _, v1 := range values {
 					for _, v2 := range values {
 						for _, v3 := range values {
-							g3.With(v1, v2, v3)
+							label3(v1, v2, v3)
 						}
 					}
 				}
@@ -48,7 +48,7 @@ func BenchmarkLabelWith(b *testing.B) {
 						if !pb.Next() {
 							return
 						}
-						g1.With(v)
+						label1(v)
 					}
 				}
 			})
@@ -61,7 +61,7 @@ func BenchmarkLabelWith(b *testing.B) {
 							if !pb.Next() {
 								return
 							}
-							g2.With(v1, v2)
+							label2(v1, v2)
 						}
 					}
 				}
@@ -76,7 +76,7 @@ func BenchmarkLabelWith(b *testing.B) {
 								if !pb.Next() {
 									return
 								}
-								g3.With(v1, v2, v3)
+								label3(v1, v2, v3)
 							}
 						}
 					}
