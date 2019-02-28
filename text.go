@@ -2,11 +2,8 @@ package metrics
 
 import (
 	"io"
-	"math"
 	"net/http"
-	"runtime"
 	"strconv"
-	"sync/atomic"
 	"time"
 )
 
@@ -49,6 +46,8 @@ func (r *Register) WriteText(w io.Writer) {
 	// write buffer
 	buf := make([]byte, len(headerLine), 4096)
 	copy(buf, headerLine)
+
+	var buckets []uint64 // reusable
 
 	// snapshot
 	r.mutex.RLock()
@@ -183,11 +182,8 @@ func (r *Register) WriteText(w io.Writer) {
 			}
 
 		case histogramType:
-			var written bool
-
 			if m.histogram != nil {
-				buf, lineEnd = m.histogram.sample(w, buf, lineEnd)
-				written = true
+				buf, lineEnd, buckets = m.histogram.sample(w, buf, lineEnd, buckets)
 			}
 
 			for _, l1 := range m.histogramL1s {
@@ -195,8 +191,7 @@ func (r *Register) WriteText(w io.Writer) {
 				view := l1.histograms
 				l1.mutex.Unlock()
 				for _, h := range view {
-					buf, lineEnd = h.sample(w, buf, lineEnd)
-					written = true
+					buf, lineEnd, buckets = h.sample(w, buf, lineEnd, buckets)
 				}
 			}
 			for _, l2 := range m.histogramL2s {
@@ -204,13 +199,8 @@ func (r *Register) WriteText(w io.Writer) {
 				view := l2.histograms
 				l2.mutex.Unlock()
 				for _, h := range view {
-					buf, lineEnd = h.sample(w, buf, lineEnd)
-					written = true
+					buf, lineEnd, buckets = h.sample(w, buf, lineEnd, buckets)
 				}
-			}
-
-			if !written && m.sample != nil {
-				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}
 		}
 	}
@@ -297,7 +287,7 @@ func (g *Real) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	return buf, lineEnd
 }
 
-func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte, buckets []uint64) ([]byte, []byte, []uint64) {
 	// calculate buffer space required
 	fit := len(h.sumPrefix) + len(h.countPrefix) + maxFloat64Text + maxUint64Text + 2*len(lineEnd)
 	for _, prefix := range h.bucketPrefixes {
@@ -309,47 +299,21 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	}
 	// buf either fits or empty (to minimise memory allocation)
 
-	// see struct comments for algorithm description
-	h.switchMutex.Lock()
+	buckets, count, sum := h.Get(buckets[:0])
 
 	// need fresh timestamp after Write and/or Lock
 	lineEnd = sampleLineEnd(lineEnd)
 
-	// Adding 1<<63 swaps the index of hotAndCold from 0 to 1,
-	// or from 1 to 0, without touching the initiation counter.
-	updated := atomic.AddUint64(&h.countAndHotIndex, 1<<63)
-
-	// write destination after switch
-	hotIndex := updated >> 63
-	coldIndex := (^hotIndex) & 1
-
-	// number of writes to cold
-	initiated := updated &^ (1 << 63)
-
-	// cooldown: await initiated writes to complete
-	for initiated > atomic.LoadUint64(&h.hotAndColdCounts[coldIndex]) {
-		runtime.Gosched()
-	}
-
-	// for all:
-	// * reset cold to zero
-	// * merge into hot
-	// * serialise to buf
-
-	atomic.StoreUint64(&h.hotAndColdCounts[coldIndex], 0)
-	atomic.AddUint64(&h.hotAndColdCounts[hotIndex], initiated)
 	buf = append(buf, h.countPrefix...)
 	offset := len(buf)
-	buf = strconv.AppendUint(buf, initiated, 10)
+	buf = strconv.AppendUint(buf, count, 10)
 	countSerial := buf[offset:]
 	buf = append(buf, lineEnd...)
 
 	// buckets
-	hotBuckets := h.hotAndColdBuckets[hotIndex]
-	coldBuckets := h.hotAndColdBuckets[coldIndex]
-	var count uint64
+	var cum uint64
 	for i, prefix := range h.bucketPrefixes {
-		if i >= len(coldBuckets) {
+		if i >= len(buckets) {
 			// (redundant) +Inf bucket
 			buf = append(buf, prefix...)
 			buf = append(buf, countSerial...)
@@ -357,43 +321,18 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 			break
 		}
 
-		n := atomic.LoadUint64(&coldBuckets[i])
-		atomic.StoreUint64(&coldBuckets[i], 0)
-		atomic.AddUint64(&hotBuckets[i], n)
-
-		count += n
+		cum += buckets[i]
 		buf = append(buf, prefix...)
-		buf = strconv.AppendUint(buf, count, 10)
+		buf = strconv.AppendUint(buf, cum, 10)
 		buf = append(buf, lineEnd...)
 	}
 
-	lostRace := false
-
 	// sum
-	sumBits := atomic.LoadUint64(&h.hotAndColdSumBits[coldIndex])
-	atomic.StoreUint64(&h.hotAndColdSumBits[coldIndex], 0)
-	sum := math.Float64frombits(sumBits)
-	for p := &h.hotAndColdSumBits[hotIndex]; ; {
-		oldBits := atomic.LoadUint64(p)
-		newBits := math.Float64bits(math.Float64frombits(oldBits) + sum)
-		if atomic.CompareAndSwapUint64(p, oldBits, newBits) {
-			break
-		}
-		lostRace = true
-	}
-
-	h.switchMutex.Unlock()
-
-	if lostRace {
-		// refresh timestamp
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
 	buf = append(buf, h.sumPrefix...)
 	buf = strconv.AppendFloat(buf, sum, 'g', -1, 64)
 	buf = append(buf, lineEnd...)
 
-	return buf, lineEnd
+	return buf, lineEnd, buckets
 }
 
 func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {

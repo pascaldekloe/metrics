@@ -415,10 +415,10 @@ func (l1 *map1LabelHistogram) with(value string) *Histogram {
 	h := newHistogram(l1.name, l1.buckets)
 	l1.histograms = append(l1.histograms, h)
 
-	for i, f := range h.bucketBounds {
+	for i, f := range h.BucketBounds {
 		h.bucketPrefixes[i] = format2LabelPrefix(l1.name, "le", strconv.FormatFloat(f, 'g', -1, 64), l1.labelName, value)
 	}
-	h.bucketPrefixes[len(h.bucketBounds)] = format2LabelPrefix(l1.name, "le", "+Inf", l1.labelName, value)
+	h.bucketPrefixes[len(h.BucketBounds)] = format2LabelPrefix(l1.name, "le", "+Inf", l1.labelName, value)
 	h.countPrefix = format1LabelPrefix(l1.name+"_count", l1.labelName, value)
 	h.sumPrefix = format1LabelPrefix(l1.name+"_sum", l1.labelName, value)
 
@@ -454,10 +454,10 @@ func (l2 *map2LabelHistogram) with(value1, value2 string) *Histogram {
 	h := newHistogram(l2.name, l2.buckets)
 	l2.histograms = append(l2.histograms, h)
 
-	for i, f := range h.bucketBounds {
+	for i, f := range h.BucketBounds {
 		h.bucketPrefixes[i] = format3LabelPrefix(l2.name, "le", strconv.FormatFloat(f, 'g', -1, 64), l2.labelNames[0], value1, l2.labelNames[1], value2)
 	}
-	h.bucketPrefixes[len(h.bucketBounds)] = format3LabelPrefix(l2.name, "le", "+Inf", l2.labelNames[0], value1, l2.labelNames[1], value2)
+	h.bucketPrefixes[len(h.BucketBounds)] = format3LabelPrefix(l2.name, "le", "+Inf", l2.labelNames[0], value1, l2.labelNames[1], value2)
 	h.countPrefix = format2LabelPrefix(l2.name+"_count", l2.labelNames[0], value1, l2.labelNames[1], value2)
 	h.sumPrefix = format2LabelPrefix(l2.name+"_sum", l2.labelNames[0], value1, l2.labelNames[1], value2)
 

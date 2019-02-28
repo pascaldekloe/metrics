@@ -78,8 +78,8 @@ func TestHistogramBuckets(t *testing.T) {
 
 	for i, gold := range golden {
 		h := reg.MustHistogram("h"+strconv.Itoa(i), gold.feed...)
-		if !reflect.DeepEqual(h.bucketBounds, gold.want) {
-			t.Errorf("%v: got buckets %v, want %v", gold.feed, h.bucketBounds, gold.want)
+		if !reflect.DeepEqual(h.BucketBounds, gold.want) {
+			t.Errorf("%v: got buckets %v, want %v", gold.feed, h.BucketBounds, gold.want)
 		}
 	}
 }

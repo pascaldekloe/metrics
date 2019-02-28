@@ -181,7 +181,7 @@ type Histogram struct {
 	hotAndColdCounts [2]uint64
 	// sums all observed values
 	hotAndColdSumBits [2]uint64
-	// counts for each bucketBounds, +Inf omitted
+	// counts for each BucketBounds, +Inf omitted
 	hotAndColdBuckets [2][]uint64
 
 	// locked on hotAndCold switch (by reads)
@@ -192,10 +192,11 @@ type Histogram struct {
 	// metric identifier
 	name string
 
-	// upper value for each bucket, sorted, +Inf omitted
-	bucketBounds []float64
+	// Upper value for each bucket, sorted, +Inf omitted.
+	// This field is read-only.
+	BucketBounds []float64
 
-	// corresponding name + label serials for each bucketBounds, including +Inf
+	// corresponding name + label serials for each BucketBounds, including +Inf
 	bucketPrefixes         []string
 	sumPrefix, countPrefix string
 }
@@ -203,7 +204,7 @@ type Histogram struct {
 // Add applies value to the countings.
 func (h *Histogram) Add(value float64) {
 	// define bucket index
-	i := sort.SearchFloat64s(h.bucketBounds, value)
+	i := sort.SearchFloat64s(h.BucketBounds, value)
 
 	// start transaction with count increment & resolve hot index [0 or 1]
 	hotIndex := atomic.AddUint64(&h.countAndHotIndex, 1) >> 63
@@ -254,7 +255,7 @@ func newHistogram(name string, buckets []float64) *Histogram {
 	}
 	buckets = buckets[:writeIndex]
 
-	h := &Histogram{name: name, bucketBounds: buckets}
+	h := &Histogram{name: name, BucketBounds: buckets}
 
 	// One memory allocation for hot & cold.
 	// Must be alligned for atomic access!
@@ -268,7 +269,7 @@ func newHistogram(name string, buckets []float64) *Histogram {
 }
 
 func (h *Histogram) prefix(name string) {
-	for i, f := range h.bucketBounds {
+	for i, f := range h.BucketBounds {
 		const suffixHead, suffixTail = `{le="`, `"} `
 		var buf strings.Builder
 		buf.Grow(len(name) + len(suffixHead) + maxFloat64Text + len(suffixTail))
@@ -278,8 +279,65 @@ func (h *Histogram) prefix(name string) {
 		buf.WriteString(suffixTail)
 		h.bucketPrefixes[i] = buf.String()
 	}
-	h.bucketPrefixes[len(h.bucketBounds)] = name + `{le="+Inf"} `
+	h.bucketPrefixes[len(h.BucketBounds)] = name + `{le="+Inf"} `
 
 	h.countPrefix = name + "_count "
 	h.sumPrefix = name + "_sum "
+}
+
+// Get returns the current value. The buckets return is the observation count
+// for each corresponding Histogram.BucketBounds element and count is the total
+// observation count.
+func (h *Histogram) Get(bucketAppend []uint64) (buckets []uint64, count uint64, sum float64) {
+	buckets = bucketAppend
+
+	// see struct comments for algorithm description
+	h.switchMutex.Lock()
+	defer h.switchMutex.Unlock()
+
+	// Adding 1<<63 swaps the index of hotAndCold from 0 to 1,
+	// or from 1 to 0, without touching the initiation counter.
+	updated := atomic.AddUint64(&h.countAndHotIndex, 1<<63)
+
+	// write destination after switch
+	hotIndex := updated >> 63
+	coldIndex := (^hotIndex) & 1
+
+	// number of writes to cold
+	count = updated &^ (1 << 63)
+
+	// cooldown: await initiated writes to complete
+	for count > atomic.LoadUint64(&h.hotAndColdCounts[coldIndex]) {
+		runtime.Gosched()
+	}
+
+	// all: merge into hot and reset cold to zero
+
+	// count
+	atomic.StoreUint64(&h.hotAndColdCounts[coldIndex], 0)
+	atomic.AddUint64(&h.hotAndColdCounts[hotIndex], count)
+
+	// buckets
+	hotBuckets := h.hotAndColdBuckets[hotIndex]
+	coldBuckets := h.hotAndColdBuckets[coldIndex]
+	for i := range coldBuckets {
+		n := atomic.LoadUint64(&coldBuckets[i])
+		atomic.StoreUint64(&coldBuckets[i], 0)
+		atomic.AddUint64(&hotBuckets[i], n)
+
+		buckets = append(buckets, n)
+	}
+
+	// sum
+	sum = math.Float64frombits(atomic.LoadUint64(&h.hotAndColdSumBits[coldIndex]))
+	atomic.StoreUint64(&h.hotAndColdSumBits[coldIndex], 0)
+	for p := &h.hotAndColdSumBits[hotIndex]; ; {
+		oldBits := atomic.LoadUint64(p)
+		newBits := math.Float64bits(math.Float64frombits(oldBits) + sum)
+		if atomic.CompareAndSwapUint64(p, oldBits, newBits) {
+			break
+		}
+	}
+
+	return
 }
