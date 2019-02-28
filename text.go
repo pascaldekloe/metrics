@@ -113,32 +113,64 @@ func (r *Register) WriteText(w io.Writer) {
 		case gaugeType:
 			var written bool
 
-			if m.gauge != nil {
-				buf, lineEnd = m.gauge.sample(w, buf, lineEnd)
+			if m.integer != nil {
+				buf, lineEnd = m.integer.sample(w, buf, lineEnd)
+				written = true
+			}
+			if m.real != nil {
+				buf, lineEnd = m.real.sample(w, buf, lineEnd)
 				written = true
 			}
 
-			for _, l1 := range m.gaugeL1s {
+			for _, l1 := range m.integerL1s {
 				l1.mutex.Lock()
-				view := l1.gauges
+				view := l1.integers
 				l1.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
 					written = true
 				}
 			}
-			for _, l2 := range m.gaugeL2s {
+			for _, l2 := range m.integerL2s {
 				l2.mutex.Lock()
-				view := l2.gauges
+				view := l2.integers
 				l2.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
 					written = true
 				}
 			}
-			for _, l3 := range m.gaugeL3s {
+			for _, l3 := range m.integerL3s {
 				l3.mutex.Lock()
-				view := l3.gauges
+				view := l3.integers
+				l3.mutex.Unlock()
+				for _, g := range view {
+					buf, lineEnd = g.sample(w, buf, lineEnd)
+					written = true
+				}
+			}
+
+			for _, l1 := range m.realL1s {
+				l1.mutex.Lock()
+				view := l1.reals
+				l1.mutex.Unlock()
+				for _, g := range view {
+					buf, lineEnd = g.sample(w, buf, lineEnd)
+					written = true
+				}
+			}
+			for _, l2 := range m.realL2s {
+				l2.mutex.Lock()
+				view := l2.reals
+				l2.mutex.Unlock()
+				for _, g := range view {
+					buf, lineEnd = g.sample(w, buf, lineEnd)
+					written = true
+				}
+			}
+			for _, l3 := range m.realL3s {
+				l3.mutex.Lock()
+				view := l3.reals
 				l3.mutex.Unlock()
 				for _, g := range view {
 					buf, lineEnd = g.sample(w, buf, lineEnd)
@@ -235,7 +267,22 @@ func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	return buf, lineEnd
 }
 
-func (g *Gauge) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+func (g *Integer) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(g.prefix)+maxInt64Text+len(lineEnd) {
+		w.Write(buf)
+		buf = buf[:0]
+		// need fresh timestamp after Write
+		lineEnd = sampleLineEnd(lineEnd)
+	}
+
+	buf = append(buf, g.prefix...)
+	buf = strconv.AppendInt(buf, g.Get(), 10)
+	buf = append(buf, lineEnd...)
+
+	return buf, lineEnd
+}
+
+func (g *Real) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 	if cap(buf)-len(buf) < len(g.prefix)+maxFloat64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]

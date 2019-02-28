@@ -14,7 +14,7 @@ func TestServeHTTP(t *testing.T) {
 	SkipTimestamp = true
 	reg := NewRegister()
 
-	g1 := reg.MustNewGauge("g1")
+	g1 := reg.MustNewReal("g1")
 	reg.MustHelp("g1", "🆘")
 	g1.Set(42)
 	c1 := reg.MustNewCounter("c1")
@@ -97,9 +97,15 @@ func BenchmarkServeHTTP(b *testing.B) {
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNewGauge("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
+				reg.MustNewReal("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
 			}
-			b.Run("gauge", benchmarkHTTPHandler)
+			b.Run("real", benchmarkHTTPHandler)
+
+			reg = NewRegister()
+			for i := n; i > 0; i-- {
+				reg.MustNewInteger("integer" + strconv.Itoa(i) + "_bench_unit").Set(int64(i))
+			}
+			b.Run("integer", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
@@ -109,13 +115,13 @@ func BenchmarkServeHTTP(b *testing.B) {
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNew1LabelGauge("real"+strconv.Itoa(i)+"_label_bench_unit", "first").With(strconv.Itoa(i % 5)).Set(float64(i))
+				reg.MustNew1LabelReal("real"+strconv.Itoa(i)+"_label_bench_unit", "first").With(strconv.Itoa(i % 5)).Set(float64(i))
 			}
 			b.Run("label5", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustNew3LabelGauge("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").With(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
+				reg.MustNew3LabelReal("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third").With(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
 			}
 			b.Run("label2x3x5", benchmarkHTTPHandler)
 

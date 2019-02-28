@@ -6,9 +6,9 @@ func BenchmarkLabelWith(b *testing.B) {
 	reg := NewRegister()
 
 	values := [...]string{"first", "second", "third", "fourth"}
-	g1 := reg.MustNew1LabelGauge("bench_label_unit", "first")
-	g2 := reg.MustNew2LabelGauge("bench_label_unit", "first", "second")
-	g3 := reg.MustNew3LabelGauge("bench_label_unit", "first", "second", "third")
+	g1 := reg.MustNew1LabelReal("bench_label_unit", "first")
+	g2 := reg.MustNew2LabelReal("bench_label_unit", "first", "second")
+	g3 := reg.MustNew3LabelReal("bench_label_unit", "first", "second", "third")
 
 	b.Run("sequential", func(b *testing.B) {
 		b.Run("4", func(b *testing.B) {

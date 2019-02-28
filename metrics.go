@@ -1,9 +1,11 @@
 // Package metrics provides atomic measures and Prometheus exposition.
 // The Must functions and Help methods deal with registration. Their use
 // is intended for setup during application launch.
+// All metrics are permanent-the API offers no deletion.
 //
-// Gauge, Counter and Histogram represent live running values and Sample
-// covers captures. Metrics are permanent-the API has no delete.
+// Gauges [Integer or Real], Counter and Histogram are live representations.
+// Value updates should be part of the respective components that alter state.
+// On the other hand, Sample holds captures of a value with a timestamp.
 package metrics
 
 import (
@@ -17,15 +19,18 @@ import (
 	"time"
 )
 
+// Special Comments
 const (
-	// special comment line starts
+	// line starts
 	typePrefix = "\n# TYPE "
 	helpPrefix = "# HELP "
-	// termination of TYPE comment
+	// terminations of TYPE comment
 	gaugeTypeLineEnd     = " gauge\n"
 	counterTypeLineEnd   = " counter\n"
 	histogramTypeLineEnd = " histogram\n"
+)
 
+const (
 	// last letter of TYPE comment
 	gaugeType     = 'e'
 	counterType   = 'r'
@@ -36,6 +41,7 @@ const (
 const (
 	maxFloat64Text = 24
 	maxUint64Text  = 20
+	maxInt64Text   = 21
 )
 
 // Counter is a cumulative metric that represents a single monotonically
@@ -49,10 +55,20 @@ type Counter struct {
 	prefix string
 }
 
-// Gauge is a metric that represents a single numerical value that can
+// Integer gauge is a metric that represents a single numerical value that can
 // arbitrarily go up and down.
-// Multiple goroutines may invoke methods on a Gauge simultaneously.
-type Gauge struct {
+// Multiple goroutines may invoke methods on a Real simultaneously.
+type Integer struct {
+	// value first due atomic alignment requirement
+	value int64
+	// sample line start as in <name> <label-map>? ' '
+	prefix string
+}
+
+// Real gauge is a metric that represents a single numerical value that can
+// arbitrarily go up and down.
+// Multiple goroutines may invoke methods on a Real simultaneously.
+type Real struct {
 	// value first due atomic alignment requirement
 	valueBits uint64
 	// sample line start as in <name> <label-map>? ' '
@@ -64,7 +80,7 @@ type Gauge struct {
 // a timestamp, at the cost of performance degradation.
 // Multiple goroutines may invoke methods on a Sample simultaneously.
 type Sample struct {
-	// value holds the latest measurement
+	// value holds the last measurement
 	value atomic.Value
 	// sample line start as in <name> <label-map>? ' '
 	prefix string
@@ -80,8 +96,12 @@ func (c *Counter) name() string {
 	return c.prefix[:strings.IndexAny(c.prefix, " {")]
 }
 
-func (g *Gauge) name() string {
-	return g.prefix[:strings.IndexAny(g.prefix, " {")]
+func (z *Integer) name() string {
+	return z.prefix[:strings.IndexAny(z.prefix, " {")]
+}
+
+func (r *Real) name() string {
+	return r.prefix[:strings.IndexAny(r.prefix, " {")]
 }
 
 func (s *Sample) name() string {
@@ -94,8 +114,13 @@ func (c *Counter) Get() uint64 {
 }
 
 // Get returns the current value.
-func (g *Gauge) Get() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&g.valueBits))
+func (z *Integer) Get() int64 {
+	return atomic.LoadInt64(&z.value)
+}
+
+// Get returns the current value.
+func (r *Real) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&r.valueBits))
 }
 
 // Get returns the last capture with its Unix time in milliseconds.
@@ -108,12 +133,17 @@ func (s *Sample) Get() (value float64, timestamp uint64) {
 	return m.value, m.timestamp
 }
 
-// Set replaces the current value with an update.
-func (g *Gauge) Set(update float64) {
-	atomic.StoreUint64(&g.valueBits, math.Float64bits(update))
+// Set replaces the current value.
+func (z *Integer) Set(update int64) {
+	atomic.StoreInt64(&z.value, update)
 }
 
-// Set replaces the capture.
+// Set replaces the current value.
+func (r *Real) Set(update float64) {
+	atomic.StoreUint64(&r.valueBits, math.Float64bits(update))
+}
+
+// Set replaces the current value.
 func (s *Sample) Set(value float64, timestamp time.Time) {
 	s.value.Store(measurement{value, uint64(timestamp.UnixNano()) / 1e6})
 }
@@ -123,18 +153,9 @@ func (c *Counter) Add(diff uint64) {
 	atomic.AddUint64(&c.value, diff)
 }
 
-// Add sets the value to the sum of the current value and summand.
-// Note that summand can be negative (for subtraction).
-func (g *Gauge) Add(summand float64) {
-	for {
-		oldBits := atomic.LoadUint64(&g.valueBits)
-		newBits := math.Float64bits(math.Float64frombits(oldBits) + summand)
-		if atomic.CompareAndSwapUint64(&g.valueBits, oldBits, newBits) {
-			return
-		}
-		// lost race
-		runtime.Gosched()
-	}
+// Add sums the value with diff. Note that diff can be negative (for subtraction).
+func (z *Integer) Add(diff int64) {
+	atomic.AddInt64(&z.value, diff)
 }
 
 // Histogram samples observations and counts them in configurable buckets.
@@ -179,7 +200,7 @@ type Histogram struct {
 	sumPrefix, countPrefix string
 }
 
-// Add applies the value to the countings.
+// Add applies value to the countings.
 func (h *Histogram) Add(value float64) {
 	// define bucket index
 	i := sort.SearchFloat64s(h.bucketBounds, value)
@@ -209,9 +230,9 @@ func (h *Histogram) Add(value float64) {
 }
 
 // AddSince applies the duration since start (in seconds) to the countings.
-// E.g., the following one-liner tracks function latencies.
+// E.g., the following one-liner measures function delay.
 //
-//	defer Latency.AddSince(time.Now())
+//	defer DurationHistogram.AddSince(time.Now())
 //
 func (h *Histogram) AddSince(start time.Time) {
 	h.Add(float64(time.Now().UnixNano()-start.UnixNano()) * 1e-9)

@@ -14,15 +14,15 @@ import (
 func TestHelp(t *testing.T) {
 	reg := NewRegister()
 
-	reg.MustNewGauge("g")
+	reg.MustNewReal("g")
 	reg.MustHelp("g", "set on gauge")
-	reg.MustNew1LabelGauge("lm", "l")
+	reg.MustNew1LabelReal("lm", "l")
 	reg.MustHelp("lm", "set on map to override")
-	reg.MustNew2LabelGauge("lm", "l1", "l2")
+	reg.MustNew2LabelReal("lm", "l1", "l2")
 	reg.MustHelp("lm", "override on map")
-	reg.MustNew3LabelGauge("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
+	reg.MustNew3LabelReal("lg", "l1", "l2", "l3").With("v1", "v2", "v3")
 	reg.MustHelp("lg", "set on labeled gauge to override")
-	reg.MustNew3LabelGauge("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
+	reg.MustNew3LabelReal("lg", "l4", "l5", "l6").With("v4", "v5", "v6")
 	reg.MustHelp("lg", "override on labeled gauge")
 
 	want := map[string]string{
@@ -106,7 +106,7 @@ func BenchmarkGet(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewGauge("bench_real_unit")
+		g := reg.MustNewReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -146,7 +146,7 @@ func BenchmarkSet(b *testing.B) {
 	reg := NewRegister()
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewGauge("bench_real_unit")
+		g := reg.MustNewReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -205,7 +205,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustNewGauge("bench_real_unit")
+		g := reg.MustNewInteger("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

@@ -8,13 +8,13 @@ import (
 )
 
 func Example() {
-	Thermostat := metrics.MustNewGauge("thermostat_celcius")
+	Thermostat := metrics.MustNewReal("thermostat_celcius")
 	Thermostat.Set(20)
 
-	Kitchen := metrics.MustNew1LabelGauge("thermostat_celcius", "room").With("kitchen")
+	Kitchen := metrics.MustNew1LabelReal("thermostat_celcius", "room").With("kitchen")
 	Kitchen.Set(19)
 
-	Station := metrics.MustNew2LabelGauge("station_celcius", "city", "source")
+	Station := metrics.MustNew2LabelReal("station_celcius", "city", "source")
 	Station.With("Amsterdam (Schiphol)", "KNMI").Set(11.2)
 	Station.With("London", "BBC").Set(9.6)
 
@@ -51,13 +51,13 @@ func Example() {
 func Example_labels() {
 	demo := metrics.NewRegister()
 	measured := demo.MustNew1LabelGaugeSample("measured_celcius", "room")
-	setpoint := demo.MustNew1LabelGauge("setpoint_celcius", "room")
+	setpoint := demo.MustNew1LabelReal("setpoint_celcius", "room")
 	cycles := demo.MustNew1LabelCounter("cycles_total", "room")
 	heating := demo.MustNew1LabelCounterSample("heating_joules_total", "room")
 
 	rooms := []*struct {
 		Measured *metrics.Sample
-		Setpoint *metrics.Gauge
+		Setpoint *metrics.Real
 		Cycles   *metrics.Counter
 		Heating  *metrics.Sample
 	}{

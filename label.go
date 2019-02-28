@@ -54,25 +54,46 @@ type Map3LabelCounter struct {
 	counters []*Counter
 }
 
-// Map1LabelGauge is a Gauge composition with a fixed label.
-// Multiple goroutines may invoke methods on a Map1LabelGauge simultaneously.
-type Map1LabelGauge struct {
+// Map1LabelInteger is a Integer composition with a fixed label.
+// Multiple goroutines may invoke methods on a Map1LabelInteger simultaneously.
+type Map1LabelInteger struct {
 	map1Label
-	gauges []*Gauge
+	integers []*Integer
 }
 
-// Map2LabelGauge is a Gauge composition with 2 fixed labels.
-// Multiple goroutines may invoke methods on a Map2LabelGauge simultaneously.
-type Map2LabelGauge struct {
+// Map2LabelInteger is a Integer composition with 2 fixed labels.
+// Multiple goroutines may invoke methods on a Map2LabelInteger simultaneously.
+type Map2LabelInteger struct {
 	map2Label
-	gauges []*Gauge
+	integers []*Integer
 }
 
-// Map3LabelGauge is a Gauge composition with 3 fixed labels.
-// Multiple goroutines may invoke methods on a Map3LabelGauge simultaneously.
-type Map3LabelGauge struct {
+// Map3LabelInteger is a Integer composition with 3 fixed labels.
+// Multiple goroutines may invoke methods on a Map3LabelInteger simultaneously.
+type Map3LabelInteger struct {
 	map3Label
-	gauges []*Gauge
+	integers []*Integer
+}
+
+// Map1LabelReal is a Real composition with a fixed label.
+// Multiple goroutines may invoke methods on a Map1LabelReal simultaneously.
+type Map1LabelReal struct {
+	map1Label
+	reals []*Real
+}
+
+// Map2LabelReal is a Real composition with 2 fixed labels.
+// Multiple goroutines may invoke methods on a Map2LabelReal simultaneously.
+type Map2LabelReal struct {
+	map2Label
+	reals []*Real
+}
+
+// Map3LabelReal is a Real composition with 3 fixed labels.
+// Multiple goroutines may invoke methods on a Map3LabelReal simultaneously.
+type Map3LabelReal struct {
+	map3Label
+	reals []*Real
 }
 
 // Map1LabelHistogram is a Histogram composition with a fixed label.
@@ -223,12 +244,12 @@ func (l3 *Map3LabelCounter) With(value1, value2, value3 string) *Counter {
 	return c
 }
 
-// With returns a dedicated Gauge for a label. The value
-// maps to the name as defined at Must2LabelGauge. With
-// registers a new Gauge if the label hasn't been used before.
+// With returns a dedicated Integer for a label. The value
+// maps to the name as defined at Must2LabelInteger. With
+// registers a new Integer if the label hasn't been used before.
 // Remember that each label represents a new time series,
 // which can dramatically increase the amount of data stored.
-func (l1 *Map1LabelGauge) With(value string) *Gauge {
+func (l1 *Map1LabelInteger) With(value string) *Integer {
 	hash := uint64(hashOffset)
 	for i := 0; i < len(value); i++ {
 		hash ^= uint64(value[i])
@@ -239,7 +260,7 @@ func (l1 *Map1LabelGauge) With(value string) *Gauge {
 
 	for i, h := range l1.labelHashes {
 		if h == hash {
-			hit := l1.gauges[i]
+			hit := l1.integers[i]
 
 			l1.mutex.Unlock()
 			return hit
@@ -247,19 +268,19 @@ func (l1 *Map1LabelGauge) With(value string) *Gauge {
 	}
 
 	l1.labelHashes = append(l1.labelHashes, hash)
-	g := &Gauge{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
-	l1.gauges = append(l1.gauges, g)
+	z := &Integer{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
+	l1.integers = append(l1.integers, z)
 
 	l1.mutex.Unlock()
-	return g
+	return z
 }
 
-// With returns a dedicated Gauge for a label combination. The values
-// map to the names (in order) as defined at Must2LabelGauge. With
-// registers a new Gauge if the combination hasn't been used before.
+// With returns a dedicated Integer for a label combination. The values
+// map to the names (in order) as defined at Must2LabelInteger. With
+// registers a new Integer if the combination hasn't been used before.
 // Remember that each label combination represents a new time series,
 // which can dramatically increase the amount of data stored.
-func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
+func (l2 *Map2LabelInteger) With(value1, value2 string) *Integer {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -276,7 +297,7 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 
 	for i, h := range l2.labelHashes {
 		if h == hash {
-			hit := l2.gauges[i]
+			hit := l2.integers[i]
 
 			l2.mutex.Unlock()
 			return hit
@@ -284,19 +305,19 @@ func (l2 *Map2LabelGauge) With(value1, value2 string) *Gauge {
 	}
 
 	l2.labelHashes = append(l2.labelHashes, hash)
-	g := &Gauge{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
-	l2.gauges = append(l2.gauges, g)
+	z := &Integer{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
+	l2.integers = append(l2.integers, z)
 
 	l2.mutex.Unlock()
-	return g
+	return z
 }
 
-// With returns a dedicated Gauge for a label combination. The values
-// map to the names (in order) as defined at Must3LabelGauge. With
-// registers a new Gauge if the combination hasn't been used before.
+// With returns a dedicated Integer for a label combination. The values
+// map to the names (in order) as defined at Must3LabelInteger. With
+// registers a new Integer if the combination hasn't been used before.
 // Remember that each label combination represents a new time series,
 // which can dramatically increase the amount of data stored.
-func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
+func (l3 *Map3LabelInteger) With(value1, value2, value3 string) *Integer {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -319,7 +340,7 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 
 	for i, h := range l3.labelHashes {
 		if h == hash {
-			hit := l3.gauges[i]
+			hit := l3.integers[i]
 
 			l3.mutex.Unlock()
 			return hit
@@ -327,11 +348,122 @@ func (l3 *Map3LabelGauge) With(value1, value2, value3 string) *Gauge {
 	}
 
 	l3.labelHashes = append(l3.labelHashes, hash)
-	g := &Gauge{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
-	l3.gauges = append(l3.gauges, g)
+	z := &Integer{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
+	l3.integers = append(l3.integers, z)
 
 	l3.mutex.Unlock()
-	return g
+	return z
+}
+
+// With returns a dedicated Real for a label. The value
+// maps to the name as defined at Must2LabelReal. With
+// registers a new Real if the label hasn't been used before.
+// Remember that each label represents a new time series,
+// which can dramatically increase the amount of data stored.
+func (l1 *Map1LabelReal) With(value string) *Real {
+	hash := uint64(hashOffset)
+	for i := 0; i < len(value); i++ {
+		hash ^= uint64(value[i])
+		hash *= hashPrime
+	}
+
+	l1.mutex.Lock()
+
+	for i, h := range l1.labelHashes {
+		if h == hash {
+			hit := l1.reals[i]
+
+			l1.mutex.Unlock()
+			return hit
+		}
+	}
+
+	l1.labelHashes = append(l1.labelHashes, hash)
+	r := &Real{prefix: format1LabelPrefix(l1.name, l1.labelName, value)}
+	l1.reals = append(l1.reals, r)
+
+	l1.mutex.Unlock()
+	return r
+}
+
+// With returns a dedicated Real for a label combination. The values
+// map to the names (in order) as defined at Must2LabelReal. With
+// registers a new Real if the combination hasn't been used before.
+// Remember that each label combination represents a new time series,
+// which can dramatically increase the amount of data stored.
+func (l2 *Map2LabelReal) With(value1, value2 string) *Real {
+	hash := uint64(hashOffset)
+	hash ^= uint64(len(value1))
+	hash *= hashPrime
+	for i := 0; i < len(value1); i++ {
+		hash ^= uint64(value1[i])
+		hash *= hashPrime
+	}
+	for i := 0; i < len(value2); i++ {
+		hash ^= uint64(value2[i])
+		hash *= hashPrime
+	}
+
+	l2.mutex.Lock()
+
+	for i, h := range l2.labelHashes {
+		if h == hash {
+			hit := l2.reals[i]
+
+			l2.mutex.Unlock()
+			return hit
+		}
+	}
+
+	l2.labelHashes = append(l2.labelHashes, hash)
+	r := &Real{prefix: format2LabelPrefix(l2.name, l2.labelNames[0], value1, l2.labelNames[1], value2)}
+	l2.reals = append(l2.reals, r)
+
+	l2.mutex.Unlock()
+	return r
+}
+
+// With returns a dedicated Real for a label combination. The values
+// map to the names (in order) as defined at Must3LabelReal. With
+// registers a new Real if the combination hasn't been used before.
+// Remember that each label combination represents a new time series,
+// which can dramatically increase the amount of data stored.
+func (l3 *Map3LabelReal) With(value1, value2, value3 string) *Real {
+	hash := uint64(hashOffset)
+	hash ^= uint64(len(value1))
+	hash *= hashPrime
+	for i := 0; i < len(value1); i++ {
+		hash ^= uint64(value1[i])
+		hash *= hashPrime
+	}
+	hash ^= uint64(len(value2))
+	hash *= hashPrime
+	for i := 0; i < len(value2); i++ {
+		hash ^= uint64(value2[i])
+		hash *= hashPrime
+	}
+	for i := 0; i < len(value3); i++ {
+		hash ^= uint64(value3[i])
+		hash *= hashPrime
+	}
+
+	l3.mutex.Lock()
+
+	for i, h := range l3.labelHashes {
+		if h == hash {
+			hit := l3.reals[i]
+
+			l3.mutex.Unlock()
+			return hit
+		}
+	}
+
+	l3.labelHashes = append(l3.labelHashes, hash)
+	r := &Real{prefix: format3LabelPrefix(l3.name, l3.labelNames[0], value1, l3.labelNames[1], value2, l3.labelNames[2], value3)}
+	l3.reals = append(l3.reals, r)
+
+	l3.mutex.Unlock()
+	return r
 }
 
 // With returns a dedicated Histogram for a label. The value

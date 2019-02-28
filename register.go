@@ -11,16 +11,20 @@ type metric struct {
 	helpComment string
 
 	counter   *Counter
-	gauge     *Gauge
+	integer   *Integer
+	real      *Real
 	histogram *Histogram
 	sample    *Sample
 
 	counterL1s   []*Map1LabelCounter
 	counterL2s   []*Map2LabelCounter
 	counterL3s   []*Map3LabelCounter
-	gaugeL1s     []*Map1LabelGauge
-	gaugeL2s     []*Map2LabelGauge
-	gaugeL3s     []*Map3LabelGauge
+	integerL1s   []*Map1LabelInteger
+	integerL2s   []*Map2LabelInteger
+	integerL3s   []*Map3LabelInteger
+	realL1s      []*Map1LabelReal
+	realL2s      []*Map2LabelReal
+	realL3s      []*Map3LabelReal
 	histogramL1s []*Map1LabelHistogram
 	histogramL2s []*Map2LabelHistogram
 	sampleL1s    []*Map1LabelSample
@@ -50,7 +54,7 @@ func NewRegister() *Register {
 
 // MustNewCounter registers a new Counter. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func MustNewCounter(name string) *Counter {
@@ -59,7 +63,7 @@ func MustNewCounter(name string) *Counter {
 
 // MustNewCounter registers a new Counter. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustNewCounter(name string) *Counter {
@@ -79,29 +83,28 @@ func (r *Register) MustNewCounter(name string) *Counter {
 		r.metrics = append(r.metrics, m)
 	}
 
-	c := &Counter{prefix: name + " "}
-	m.counter = c
+	m.counter = &Counter{prefix: name + " "}
 
 	r.mutex.Unlock()
 
-	return c
+	return m.counter
 }
 
-// MustNewGauge registers a new Gauge. The function panics when name
+// MustNewInteger registers a new gauge. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
-// label options are allowed though. The Sample is ignored once a Gauge is
-// registered under the same name. This fallback allows warm starts.
-func MustNewGauge(name string) *Gauge {
-	return std.MustNewGauge(name)
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
+// label options are allowed though. The Sample is ignored once a gauge
+// is registered under the same name. This fallback allows warm starts.
+func MustNewInteger(name string) *Integer {
+	return std.MustNewInteger(name)
 }
 
-// MustNewGauge registers a new Gauge. The function panics when name
+// MustNewInteger registers a new gauge. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
-// label options are allowed though. The Sample is ignored once a Gauge is
-// registered under the same name. This fallback allows warm starts.
-func (r *Register) MustNewGauge(name string) *Gauge {
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
+// label options are allowed though. The Sample is ignored once a gauge
+// is registered under the same name. This fallback allows warm starts.
+func (r *Register) MustNewInteger(name string) *Integer {
 	mustValidName(name)
 
 	r.mutex.Lock()
@@ -109,7 +112,7 @@ func (r *Register) MustNewGauge(name string) *Gauge {
 	var m *metric
 	if index, ok := r.indices[name]; ok {
 		m = r.metrics[index]
-		if m.typeID() != gaugeType || m.gauge != nil {
+		if m.typeID() != gaugeType || m.integer != nil || m.real != nil {
 			panic("metrics: name already in use")
 		}
 	} else {
@@ -118,12 +121,49 @@ func (r *Register) MustNewGauge(name string) *Gauge {
 		r.metrics = append(r.metrics, m)
 	}
 
-	g := &Gauge{prefix: name + " "}
-	m.gauge = g
+	m.integer = &Integer{prefix: name + " "}
 
 	r.mutex.Unlock()
 
-	return g
+	return m.integer
+}
+
+// MustNewReal registers a new gauge. The function panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
+// label options are allowed though. The Sample is ignored once a gauge
+// is registered under the same name. This fallback allows warm starts.
+func MustNewReal(name string) *Real {
+	return std.MustNewReal(name)
+}
+
+// MustNewReal registers a new gauge. The function panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
+// label options are allowed though. The Sample is ignored once a gauge
+// is registered under the same name. This fallback allows warm starts.
+func (r *Register) MustNewReal(name string) *Real {
+	mustValidName(name)
+
+	r.mutex.Lock()
+
+	var m *metric
+	if index, ok := r.indices[name]; ok {
+		m = r.metrics[index]
+		if m.typeID() != gaugeType || m.integer != nil || m.real != nil {
+			panic("metrics: name already in use")
+		}
+	} else {
+		r.indices[name] = uint32(len(r.metrics))
+		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
+		r.metrics = append(r.metrics, m)
+	}
+
+	m.real = &Real{prefix: name + " "}
+
+	r.mutex.Unlock()
+
+	return m.real
 }
 
 // MustNewHistogram registers a new Histogram. Buckets define the upper
@@ -169,7 +209,7 @@ func (r *Register) MustNewHistogram(name string, buckets ...float64) *Histogram 
 
 // MustNewGaugeSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
 func MustNewGaugeSample(name string) *Sample {
@@ -178,7 +218,7 @@ func MustNewGaugeSample(name string) *Sample {
 
 // MustNewGaugeSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Gauge, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustNewGaugeSample(name string) *Sample {
@@ -198,17 +238,16 @@ func (r *Register) MustNewGaugeSample(name string) *Sample {
 		r.metrics = append(r.metrics, m)
 	}
 
-	s := &Sample{prefix: name + " "}
-	m.sample = s
+	m.sample = &Sample{prefix: name + " "}
 
 	r.mutex.Unlock()
 
-	return s
+	return m.sample
 }
 
 // MustNewCounterSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func MustNewCounterSample(name string) *Sample {
@@ -217,7 +256,7 @@ func MustNewCounterSample(name string) *Sample {
 
 // MustNewCounterSample registers a new Sample. The function panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations of Counter, Sample and the various
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustNewCounterSample(name string) *Sample {
@@ -237,12 +276,11 @@ func (r *Register) MustNewCounterSample(name string) *Sample {
 		r.metrics = append(r.metrics, m)
 	}
 
-	s := &Sample{prefix: name + " "}
-	m.sample = s
+	m.sample = &Sample{prefix: name + " "}
 
 	r.mutex.Unlock()
 
-	return s
+	return m.sample
 }
 
 // MustNew1LabelCounter returns a composition with one fixed label.
@@ -414,77 +452,77 @@ func (r *Register) MustNew3LabelCounter(name, label1Name, label2Name, label3Name
 	return l3
 }
 
-// MustNew1LabelGauge returns a composition with one fixed label.
+// MustNew1LabelInteger returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) the label is already in use.
-func MustNew1LabelGauge(name, labelName string) *Map1LabelGauge {
-	return std.MustNew1LabelGauge(name, labelName)
+func MustNew1LabelInteger(name, labelName string) *Map1LabelInteger {
+	return std.MustNew1LabelInteger(name, labelName)
 }
 
-// MustNew1LabelGauge returns a composition with one fixed label.
+// MustNew1LabelInteger returns a composition with one fixed label.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) the label is already in use.
-func (r *Register) MustNew1LabelGauge(name, labelName string) *Map1LabelGauge {
+func (r *Register) MustNew1LabelInteger(name, labelName string) *Map1LabelInteger {
 	mustValidName(name)
 	mustValidLabelName(labelName)
 
 	r.mutex.Lock()
 
-	var l1 *Map1LabelGauge
+	var l1 *Map1LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l1 = &Map1LabelGauge{map1Label: map1Label{
+		l1 = &Map1LabelInteger{map1Label: map1Label{
 			name: name, labelName: labelName}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL1s:    []*Map1LabelGauge{l1},
+			integerL1s:  []*Map1LabelInteger{l1},
 		})
 	} else {
 		m := r.metrics[index]
-		if m.typeID() != gaugeType {
+		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, o := range m.gaugeL1s {
+		for _, o := range m.integerL1s {
 			if o.labelName == labelName {
 				panic("metrics: label already in use")
 			}
 		}
-		l1 = &Map1LabelGauge{map1Label: map1Label{
+		l1 = &Map1LabelInteger{map1Label: map1Label{
 			name: name, labelName: labelName}}
-		m.gaugeL1s = append(m.gaugeL1s, l1)
+		m.integerL1s = append(m.integerL1s, l1)
 	}
 
 	r.mutex.Unlock()
 	return l1
 }
 
-// MustNew2LabelGauge returns a composition with two fixed labels.
+// MustNew2LabelInteger returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the labels are already in use.
-func MustNew2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
-	return std.MustNew2LabelGauge(name, label1Name, label2Name)
+func MustNew2LabelInteger(name, label1Name, label2Name string) *Map2LabelInteger {
+	return std.MustNew2LabelInteger(name, label1Name, label2Name)
 }
 
-// MustNew2LabelGauge returns a composition with two fixed labels.
+// MustNew2LabelInteger returns a composition with two fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the labels are already in use.
-func (r *Register) MustNew2LabelGauge(name, label1Name, label2Name string) *Map2LabelGauge {
+func (r *Register) MustNew2LabelInteger(name, label1Name, label2Name string) *Map2LabelInteger {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -494,55 +532,55 @@ func (r *Register) MustNew2LabelGauge(name, label1Name, label2Name string) *Map2
 
 	r.mutex.Lock()
 
-	var l2 *Map2LabelGauge
+	var l2 *Map2LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l2 = &Map2LabelGauge{map2Label: map2Label{
+		l2 = &Map2LabelInteger{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL2s:    []*Map2LabelGauge{l2},
+			integerL2s:  []*Map2LabelInteger{l2},
 		})
 	} else {
 		m := r.metrics[index]
-		if m.typeID() != gaugeType {
+		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, o := range m.gaugeL2s {
+		for _, o := range m.integerL2s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
 				panic("metrics: labels already in use")
 			}
 		}
-		l2 = &Map2LabelGauge{map2Label: map2Label{
+		l2 = &Map2LabelInteger{map2Label: map2Label{
 			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.gaugeL2s = append(m.gaugeL2s, l2)
+		m.integerL2s = append(m.integerL2s, l2)
 	}
 
 	r.mutex.Unlock()
 	return l2
 }
 
-// MustNew3LabelGauge returns a composition with three fixed labels.
+// MustNew3LabelInteger returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the labels are already in use.
-func MustNew3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
-	return std.MustNew3LabelGauge(name, label1Name, label2Name, label3Name)
+func MustNew3LabelInteger(name, label1Name, label2Name, label3Name string) *Map3LabelInteger {
+	return std.MustNew3LabelInteger(name, label1Name, label2Name, label3Name)
 }
 
-// MustNew3LabelGauge returns a composition with three fixed labels.
+// MustNew3LabelInteger returns a composition with three fixed labels.
 // The function panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the labels are already in use.
-func (r *Register) MustNew3LabelGauge(name, label1Name, label2Name, label3Name string) *Map3LabelGauge {
+func (r *Register) MustNew3LabelInteger(name, label1Name, label2Name, label3Name string) *Map3LabelInteger {
 	mustValidName(name)
 	mustValidLabelName(label1Name)
 	mustValidLabelName(label2Name)
@@ -553,30 +591,199 @@ func (r *Register) MustNew3LabelGauge(name, label1Name, label2Name, label3Name s
 
 	r.mutex.Lock()
 
-	var l3 *Map3LabelGauge
+	var l3 *Map3LabelInteger
 	if index, ok := r.indices[name]; !ok {
-		l3 = &Map3LabelGauge{map3Label: map3Label{
+		l3 = &Map3LabelInteger{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
 
 		r.indices[name] = uint32(len(r.metrics))
 		r.metrics = append(r.metrics, &metric{
 			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			gaugeL3s:    []*Map3LabelGauge{l3},
+			integerL3s:  []*Map3LabelInteger{l3},
 		})
 	} else {
 		m := r.metrics[index]
-		if m.typeID() != gaugeType {
+		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, o := range m.gaugeL3s {
+		for _, o := range m.integerL3s {
 			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
 				panic("metrics: labels already in use")
 			}
 		}
-		l3 = &Map3LabelGauge{map3Label: map3Label{
+		l3 = &Map3LabelInteger{map3Label: map3Label{
 			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.gaugeL3s = append(m.gaugeL3s, l3)
+		m.integerL3s = append(m.integerL3s, l3)
+	}
+
+	r.mutex.Unlock()
+	return l3
+}
+
+// MustNew1LabelReal returns a composition with one fixed label.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func MustNew1LabelReal(name, labelName string) *Map1LabelReal {
+	return std.MustNew1LabelReal(name, labelName)
+}
+
+// MustNew1LabelReal returns a composition with one fixed label.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) the label is already in use.
+func (r *Register) MustNew1LabelReal(name, labelName string) *Map1LabelReal {
+	mustValidName(name)
+	mustValidLabelName(labelName)
+
+	r.mutex.Lock()
+
+	var l1 *Map1LabelReal
+	if index, ok := r.indices[name]; !ok {
+		l1 = &Map1LabelReal{map1Label: map1Label{
+			name: name, labelName: labelName}}
+
+		r.indices[name] = uint32(len(r.metrics))
+		r.metrics = append(r.metrics, &metric{
+			typeComment: typePrefix + name + gaugeTypeLineEnd,
+			realL1s:     []*Map1LabelReal{l1},
+		})
+	} else {
+		m := r.metrics[index]
+		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
+			panic("metrics: name in use as another type")
+		}
+
+		for _, o := range m.realL1s {
+			if o.labelName == labelName {
+				panic("metrics: label already in use")
+			}
+		}
+		l1 = &Map1LabelReal{map1Label: map1Label{
+			name: name, labelName: labelName}}
+		m.realL1s = append(m.realL1s, l1)
+	}
+
+	r.mutex.Unlock()
+	return l1
+}
+
+// MustNew2LabelReal returns a composition with two fixed labels.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew2LabelReal(name, label1Name, label2Name string) *Map2LabelReal {
+	return std.MustNew2LabelReal(name, label1Name, label2Name)
+}
+
+// MustNew2LabelReal returns a composition with two fixed labels.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew2LabelReal(name, label1Name, label2Name string) *Map2LabelReal {
+	mustValidName(name)
+	mustValidLabelName(label1Name)
+	mustValidLabelName(label2Name)
+	if label1Name > label2Name {
+		panic("metrics: label name arguments aren't sorted")
+	}
+
+	r.mutex.Lock()
+
+	var l2 *Map2LabelReal
+	if index, ok := r.indices[name]; !ok {
+		l2 = &Map2LabelReal{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+
+		r.indices[name] = uint32(len(r.metrics))
+		r.metrics = append(r.metrics, &metric{
+			typeComment: typePrefix + name + gaugeTypeLineEnd,
+			realL2s:     []*Map2LabelReal{l2},
+		})
+	} else {
+		m := r.metrics[index]
+		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
+			panic("metrics: name in use as another type")
+		}
+
+		for _, o := range m.realL2s {
+			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
+				panic("metrics: labels already in use")
+			}
+		}
+		l2 = &Map2LabelReal{map2Label: map2Label{
+			name: name, labelNames: [...]string{label1Name, label2Name}}}
+		m.realL2s = append(m.realL2s, l2)
+	}
+
+	r.mutex.Unlock()
+	return l2
+}
+
+// MustNew3LabelReal returns a composition with three fixed labels.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func MustNew3LabelReal(name, label1Name, label2Name, label3Name string) *Map3LabelReal {
+	return std.MustNew3LabelReal(name, label1Name, label2Name, label3Name)
+}
+
+// MustNew3LabelReal returns a composition with three fixed labels.
+// The function panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) a label name does not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
+// (4) the label names do not appear in ascending order or
+// (5) the labels are already in use.
+func (r *Register) MustNew3LabelReal(name, label1Name, label2Name, label3Name string) *Map3LabelReal {
+	mustValidName(name)
+	mustValidLabelName(label1Name)
+	mustValidLabelName(label2Name)
+	mustValidLabelName(label3Name)
+	if label1Name > label2Name || label2Name > label3Name {
+		panic("metrics: label name arguments aren't sorted")
+	}
+
+	r.mutex.Lock()
+
+	var l3 *Map3LabelReal
+	if index, ok := r.indices[name]; !ok {
+		l3 = &Map3LabelReal{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+
+		r.indices[name] = uint32(len(r.metrics))
+		r.metrics = append(r.metrics, &metric{
+			typeComment: typePrefix + name + gaugeTypeLineEnd,
+			realL3s:     []*Map3LabelReal{l3},
+		})
+	} else {
+		m := r.metrics[index]
+		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
+			panic("metrics: name in use as another type")
+		}
+
+		for _, o := range m.realL3s {
+			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
+				panic("metrics: labels already in use")
+			}
+		}
+		l3 = &Map3LabelReal{map3Label: map3Label{
+			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+		m.realL3s = append(m.realL3s, l3)
 	}
 
 	r.mutex.Unlock()
