@@ -1,11 +1,11 @@
 // Package metrics provides atomic measures and Prometheus exposition.
-// The Must functions and Help methods deal with registration. Their use
-// is intended for setup during application launch.
+// The Must functions deal with registration. Their use is intended for setup
+// during application launch only.
 // All metrics are permanent-the API offers no deletion.
 //
 // Gauges [Integer or Real], Counter and Histogram are live representations.
 // Value updates should be part of the respective components that alter state.
-// On the other hand, Sample holds captures of a value with a timestamp.
+// In all other cases, use Sample to capture with timestamps.
 package metrics
 
 import (
@@ -24,17 +24,11 @@ const (
 	// line starts
 	typePrefix = "\n# TYPE "
 	helpPrefix = "# HELP "
+
 	// terminations of TYPE comment
 	gaugeTypeLineEnd     = " gauge\n"
 	counterTypeLineEnd   = " counter\n"
 	histogramTypeLineEnd = " histogram\n"
-)
-
-const (
-	// last letter of TYPE comment
-	gaugeType     = 'e'
-	counterType   = 'r'
-	histogramType = 'm'
 )
 
 // Serialisation Byte Limits
@@ -57,7 +51,7 @@ type Counter struct {
 
 // Integer gauge is a metric that represents a single numerical value that can
 // arbitrarily go up and down.
-// Multiple goroutines may invoke methods on a Real simultaneously.
+// Multiple goroutines may invoke methods on a Integer simultaneously.
 type Integer struct {
 	// value first due atomic alignment requirement
 	value int64
@@ -90,22 +84,6 @@ type Sample struct {
 type measurement struct {
 	value     float64
 	timestamp uint64
-}
-
-func (c *Counter) name() string {
-	return c.prefix[:strings.IndexAny(c.prefix, " {")]
-}
-
-func (z *Integer) name() string {
-	return z.prefix[:strings.IndexAny(z.prefix, " {")]
-}
-
-func (r *Real) name() string {
-	return r.prefix[:strings.IndexAny(r.prefix, " {")]
-}
-
-func (s *Sample) name() string {
-	return s.prefix[:strings.IndexAny(s.prefix, " {")]
 }
 
 // Get returns the current value.
@@ -148,12 +126,13 @@ func (s *Sample) Set(value float64, timestamp time.Time) {
 	s.value.Store(measurement{value, uint64(timestamp.UnixNano()) / 1e6})
 }
 
-// Add increments the value with diff.
+// Add increments the current value with diff.
 func (c *Counter) Add(diff uint64) {
 	atomic.AddUint64(&c.value, diff)
 }
 
-// Add sums the value with diff. Note that diff can be negative (for subtraction).
+// Add sums the current value with diff.
+// Note that diff can be negative (for subtraction).
 func (z *Integer) Add(diff int64) {
 	atomic.AddInt64(&z.value, diff)
 }
