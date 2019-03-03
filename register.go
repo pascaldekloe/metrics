@@ -915,13 +915,13 @@ func mustValidLabelName(s string) {
 	}
 }
 
-// Help sets the comment for the metric name. Any previous text is replaced.
+// MustHelp sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
 func MustHelp(name, text string) {
 	std.MustHelp(name, text)
 }
 
-// Help sets the comment for the metric name. Any previous text is replaced.
+// MustHelp sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
 func (r *Register) MustHelp(name, text string) {
 	comment := helpComment(name, text)

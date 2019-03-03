@@ -237,7 +237,7 @@ func newHistogram(name string, buckets []float64) *Histogram {
 	h := &Histogram{name: name, BucketBounds: buckets}
 
 	// One memory allocation for hot & cold.
-	// Must be alligned for atomic access!
+	// Must be aligned for atomic access!
 	bothBuckets := make([]uint64, 2*len(buckets))
 	h.hotAndColdBuckets[0] = bothBuckets[:len(buckets)]
 	h.hotAndColdBuckets[1] = bothBuckets[len(buckets):]
