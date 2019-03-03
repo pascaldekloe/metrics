@@ -2,6 +2,8 @@
 
 A Prometheus exposition library for the Go programming language.
 
+Setup as `http.HandleFunc("/metrics", metrics.ServeHTTP)` and define metrics like `var RequestCount = metrics.MustCounter("rpc_requests_total", "Number of service invocations.")`.
+
 This is free and unencumbered software released into the
 [public domain](https://creativecommons.org/publicdomain/zero/1.0).
 
