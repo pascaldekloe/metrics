@@ -127,7 +127,7 @@ func BenchmarkServeHTTP(b *testing.B) {
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustGaugeSample("sample"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
+				reg.MustRealSample("real"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
 			}
 			b.Run("sample", benchmarkHTTPHandler)
 		})

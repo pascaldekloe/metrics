@@ -111,7 +111,7 @@ func (r *Register) WriteText(w io.Writer) {
 				}
 			}
 
-		case counterSampleID, gaugeSampleID:
+		case counterSampleID, realSampleID:
 			if m.sample != nil {
 				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
 			}

@@ -50,7 +50,7 @@ func Example() {
 // Label Assignment And Default Value Initiation
 func Example_labels() {
 	demo := metrics.NewRegister()
-	measured := demo.Must1LabelGaugeSample("measured_celcius", "room")
+	measured := demo.Must1LabelRealSample("measured_celcius", "room")
 	setpoint := demo.Must1LabelReal("setpoint_celcius", "room")
 	cycles := demo.Must1LabelCounter("cycles_total", "room")
 	heating := demo.Must1LabelCounterSample("heating_joules_total", "room")

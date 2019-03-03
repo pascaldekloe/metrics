@@ -10,7 +10,7 @@ const (
 	counterSampleID
 	integerID
 	realID
-	gaugeSampleID
+	realSampleID
 	histogramID
 )
 
@@ -169,23 +169,23 @@ func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 	return h
 }
 
-// MustGaugeSample registers a new Sample. Registration panics when name
+// MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustGaugeSample(name string) *Sample {
-	return MustGaugeSample(name)
+func MustRealSample(name string) *Sample {
+	return MustRealSample(name)
 }
 
-// MustGaugeSample registers a new Sample. Registration panics when name
+// MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustGaugeSample(name string) *Sample {
+func (r *Register) MustRealSample(name string) *Sample {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID)
+	m := r.mustMetric(name, gaugeTypeLineEnd, realSampleID)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
@@ -724,7 +724,7 @@ func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3N
 	return l.sample3
 }
 
-// Must1LabelGaugeSample returns a function which assigns dedicated Sample
+// Must1LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -734,11 +734,11 @@ func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3N
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
-	return std.Must1LabelGaugeSample(name, labelName)
+func Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
+	return std.Must1LabelRealSample(name, labelName)
 }
 
-// Must1LabelGaugeSample returns a function which assigns dedicated Sample
+// Must1LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -748,17 +748,17 @@ func Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Samp
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
+func (r *Register) Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidNames(name, labelName)
 
 	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, labelName, "", "")
+	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, labelName, "", "")
 	r.mutex.Unlock()
 
 	return l.sample1
 }
 
-// Must2LabelGaugeSample returns a function which assigns dedicated Sample
+// Must2LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -769,11 +769,11 @@ func (r *Register) Must1LabelGaugeSample(name, labelName string) func(labelValue
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
-	return std.Must2LabelGaugeSample(name, label1Name, label2Name)
+func Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+	return std.Must2LabelRealSample(name, label1Name, label2Name)
 }
 
-// Must2LabelGaugeSample returns a function which assigns dedicated Sample
+// Must2LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -784,17 +784,17 @@ func Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+func (r *Register) Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
 	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, label1Name, label2Name, "")
+	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, "")
 	r.mutex.Unlock()
 
 	return l.sample2
 }
 
-// Must3LabelGaugeSample returns a function which assigns dedicated Sample
+// Must3LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -805,11 +805,11 @@ func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) fu
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
-	return std.Must3LabelGaugeSample(name, label1Name, label2Name, label3Name)
+func Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+	return std.Must3LabelRealSample(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelGaugeSample returns a function which assigns dedicated Sample
+// Must3LabelRealSample returns a function which assigns dedicated Sample
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
@@ -820,11 +820,11 @@ func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+func (r *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
 	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
 	r.mutex.Unlock()
 
 	return l.sample3

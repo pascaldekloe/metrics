@@ -85,10 +85,8 @@ func TestHistogramBuckets(t *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	reg := NewRegister()
-
 	b.Run("counter", func(b *testing.B) {
-		c := reg.MustCounter("bench_integer_unit")
+		c := NewRegister().MustCounter("bench_counter_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -105,37 +103,37 @@ func BenchmarkGet(b *testing.B) {
 		})
 	})
 
-	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustReal("bench_real_unit")
+	b.Run("real", func(b *testing.B) {
+		r := NewRegister().MustReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				g.Get()
+				r.Get()
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			b.SetParallelism(2)
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					g.Get()
+					r.Get()
 				}
 			})
 		})
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := reg.MustGaugeSample("bench_sample_unit")
+		r := NewRegister().MustRealSample("bench_sample_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				s.Get()
+				r.Get()
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			b.SetParallelism(2)
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					s.Get()
+					r.Get()
 				}
 			})
 		})
@@ -143,40 +141,38 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	reg := NewRegister()
-
-	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustReal("bench_real_unit")
+	b.Run("real", func(b *testing.B) {
+		r := NewRegister().MustReal("bench_real_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				g.Set(42)
+				r.Set(42)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			b.SetParallelism(2)
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					g.Set(42)
+					r.Set(42)
 				}
 			})
 		})
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		s := reg.MustGaugeSample("bench_sample_unit")
+		r := NewRegister().MustRealSample("bench_sample_unit")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				s.Set(42, timestamp)
+				r.Set(42, timestamp)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			b.SetParallelism(2)
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					s.Set(42, timestamp)
+					r.Set(42, timestamp)
 				}
 			})
 		})
@@ -184,10 +180,8 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	reg := NewRegister()
-
 	b.Run("counter", func(b *testing.B) {
-		c := reg.MustCounter("bench_integer_unit")
+		c := NewRegister().MustCounter("bench_counter_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -204,8 +198,8 @@ func BenchmarkAdd(b *testing.B) {
 		})
 	})
 
-	b.Run("gauge", func(b *testing.B) {
-		g := reg.MustInteger("bench_real_unit")
+	b.Run("integer", func(b *testing.B) {
+		g := NewRegister().MustInteger("bench_gauge_unit")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -223,12 +217,12 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("histogram5", func(b *testing.B) {
-		g := reg.MustHistogram("bench_histogram_unit", .01, .02, .05, .1)
+		h := NewRegister().MustHistogram("bench_histogram_unit", .01, .02, .05, .1)
 
 		b.Run("sequential", func(b *testing.B) {
 			f := .001
 			for i := 0; i < b.N; i++ {
-				g.Add(f)
+				h.Add(f)
 				f += .001
 			}
 		})
@@ -237,7 +231,7 @@ func BenchmarkAdd(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				f := .001
 				for pb.Next() {
-					g.Add(f)
+					h.Add(f)
 					f += .001
 				}
 			})
