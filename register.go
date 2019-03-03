@@ -67,26 +67,17 @@ func MustCounter(name string) *Counter {
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustCounter(name string) *Counter {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != counterType || m.counter != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + counterTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, counterTypeLineEnd)
+	if m.counter != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.counter = &Counter{prefix: name + " "}
-
-	r.mutex.Unlock()
-
 	return m.counter
 }
 
@@ -105,26 +96,17 @@ func MustInteger(name string) *Integer {
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
 func (r *Register) MustInteger(name string) *Integer {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != gaugeType || m.integer != nil || m.real != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	if m.integer != nil || m.real != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.integer = &Integer{prefix: name + " "}
-
-	r.mutex.Unlock()
-
 	return m.integer
 }
 
@@ -143,26 +125,17 @@ func MustReal(name string) *Real {
 // label options are allowed though. The Sample is ignored once a gauge
 // is registered under the same name. This fallback allows warm starts.
 func (r *Register) MustReal(name string) *Real {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != gaugeType || m.integer != nil || m.real != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	if m.integer != nil || m.real != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.real = &Real{prefix: name + " "}
-
-	r.mutex.Unlock()
-
 	return m.real
 }
 
@@ -181,29 +154,20 @@ func MustHistogram(name string, buckets ...float64) *Histogram {
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
 func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	h := newHistogram(name, buckets)
 	h.prefix(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != histogramType || m.histogram != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + histogramTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, histogramTypeLineEnd)
+	if m.histogram != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.histogram = h
-
-	r.mutex.Unlock()
-
 	return h
 }
 
@@ -222,26 +186,17 @@ func MustGaugeSample(name string) *Sample {
 // label options are allowed though. The Sample is ignored once a Gauge is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustGaugeSample(name string) *Sample {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != gaugeType || m.sample != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + gaugeTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	if m.sample != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.sample = &Sample{prefix: name + " "}
-
-	r.mutex.Unlock()
-
 	return m.sample
 }
 
@@ -260,25 +215,17 @@ func MustCounterSample(name string) *Sample {
 // label options are allowed though. The Sample is ignored once a Counter is
 // registered under the same name. This fallback allows warm starts.
 func (r *Register) MustCounterSample(name string) *Sample {
-	mustValidName(name)
+	mustValidMetricName(name)
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var m *metric
-	if index, ok := r.indices[name]; ok {
-		m = r.metrics[index]
-		if m.typeID() != counterType || m.sample != nil {
-			panic("metrics: name already in use")
-		}
-	} else {
-		r.indices[name] = uint32(len(r.metrics))
-		m = &metric{typeComment: typePrefix + name + counterTypeLineEnd}
-		r.metrics = append(r.metrics, m)
+	m := r.mustMetric(name, counterTypeLineEnd)
+	if m.sample != nil {
+		panic("metrics: name already in use")
 	}
 
 	m.sample = &Sample{prefix: name + " "}
-
-	r.mutex.Unlock()
 
 	return m.sample
 }
@@ -308,39 +255,24 @@ func Must1LabelCounter(name, labelName string) func(labelValue string) *Counter 
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := new(map1LabelCounter)
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelCounter
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelCounter{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL1s:  []*map1LabelCounter{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.counterL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.counterL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelCounter{map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.counterL1s = append(m.counterL1s, l1)
 	}
+	m.counterL1s = append(m.counterL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelCounter returns a function which assigns dedicated Counter
@@ -370,43 +302,24 @@ func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, la
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := new(map2LabelCounter)
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelCounter
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelCounter{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL2s:  []*map2LabelCounter{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.counterL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.counterL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelCounter{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.counterL2s = append(m.counterL2s, l2)
 	}
+	m.counterL2s = append(m.counterL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must3LabelCounter returns a function which assigns dedicated Counter
@@ -436,44 +349,24 @@ func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(lab
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	m3 := new(map3LabelCounter)
+	m3.name = name
+	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l3 *map3LabelCounter
-	if index, ok := r.indices[name]; !ok {
-		l3 = &map3LabelCounter{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			counterL3s:  []*map3LabelCounter{l3},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.counterL3s {
+		if o.labelNames == m3.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.counterL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l3 = &map3LabelCounter{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.counterL3s = append(m.counterL3s, l3)
 	}
+	m.counterL3s = append(m.counterL3s, m3)
 
-	r.mutex.Unlock()
-	return l3.with
+	return m3.with
 }
 
 // Must1LabelInteger returns a function which assigns dedicated Integer
@@ -501,39 +394,24 @@ func Must1LabelInteger(name, labelName string) func(labelValue string) *Integer 
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := new(map1LabelInteger)
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelInteger
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelInteger{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL1s:  []*map1LabelInteger{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.integerL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.integerL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelInteger{map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.integerL1s = append(m.integerL1s, l1)
 	}
+	m.integerL1s = append(m.integerL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelInteger returns a function which assigns dedicated Integer
@@ -563,43 +441,24 @@ func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, la
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := new(map2LabelInteger)
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelInteger
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelInteger{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL2s:  []*map2LabelInteger{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.integerL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.integerL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelInteger{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.integerL2s = append(m.integerL2s, l2)
 	}
+	m.integerL2s = append(m.integerL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must3LabelInteger returns a function which assigns dedicated Integer
@@ -629,44 +488,24 @@ func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(lab
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	m3 := new(map3LabelInteger)
+	m3.name = name
+	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l3 *map3LabelInteger
-	if index, ok := r.indices[name]; !ok {
-		l3 = &map3LabelInteger{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			integerL3s:  []*map3LabelInteger{l3},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.real != nil || len(m.realL1s) != 0 || len(m.realL2s) != 0 || len(m.realL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.integerL3s {
+		if o.labelNames == m3.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.integerL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l3 = &map3LabelInteger{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.integerL3s = append(m.integerL3s, l3)
 	}
+	m.integerL3s = append(m.integerL3s, m3)
 
-	r.mutex.Unlock()
-	return l3.with
+	return m3.with
 }
 
 // Must1LabelReal returns a function which assigns dedicated Real
@@ -694,39 +533,24 @@ func Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := new(map1LabelReal)
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelReal
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelReal{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL1s:     []*map1LabelReal{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.realL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.realL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelReal{map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.realL1s = append(m.realL1s, l1)
 	}
+	m.realL1s = append(m.realL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelReal returns a function which assigns dedicated Real
@@ -756,43 +580,24 @@ func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := new(map2LabelReal)
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelReal
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelReal{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL2s:     []*map2LabelReal{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.realL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.realL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelReal{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.realL2s = append(m.realL2s, l2)
 	}
+	m.realL2s = append(m.realL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must3LabelReal returns a function which assigns dedicated Real
@@ -822,44 +627,24 @@ func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	m3 := new(map3LabelReal)
+	m3.name = name
+	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l3 *map3LabelReal
-	if index, ok := r.indices[name]; !ok {
-		l3 = &map3LabelReal{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			realL3s:     []*map3LabelReal{l3},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType || m.integer != nil || len(m.integerL1s) != 0 || len(m.integerL2s) != 0 || len(m.integerL3s) != 0 {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.realL3s {
+		if o.labelNames == m3.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.realL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l3 = &map3LabelReal{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.realL3s = append(m.realL3s, l3)
 	}
+	m.realL3s = append(m.realL3s, m3)
 
-	r.mutex.Unlock()
-	return l3.with
+	return m3.with
 }
 
 // Must1LabelHistogram returns a function which assigns dedicated Histogram
@@ -891,39 +676,24 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := &map1LabelHistogram{buckets: buckets}
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelHistogram
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelHistogram{buckets: buckets, map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL1s: []*map1LabelHistogram{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, histogramTypeLineEnd)
+	for _, o := range m.histogramL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.histogramL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelHistogram{buckets: buckets, map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.histogramL1s = append(m.histogramL1s, l1)
 	}
+	m.histogramL1s = append(m.histogramL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelHistogram returns a function which assigns dedicated Histogram
@@ -957,43 +727,24 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := &map2LabelHistogram{buckets: buckets}
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelHistogram
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelHistogram{buckets: buckets, map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment:  typePrefix + name + histogramTypeLineEnd,
-			histogramL2s: []*map2LabelHistogram{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != histogramType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, histogramTypeLineEnd)
+	for _, o := range m.histogramL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.histogramL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelHistogram{buckets: buckets, map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.histogramL2s = append(m.histogramL2s, l2)
 	}
+	m.histogramL2s = append(m.histogramL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must1LabelCounterSample returns a function which assigns dedicated Sample
@@ -1021,39 +772,24 @@ func Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sa
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := new(map1LabelSample)
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL1s:   []*map1LabelSample{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.sampleL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.sampleL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.sampleL1s = append(m.sampleL1s, l1)
 	}
+	m.sampleL1s = append(m.sampleL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelCounterSample returns a function which assigns dedicated Sample
@@ -1083,43 +819,24 @@ func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Val
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := new(map2LabelSample)
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL2s:   []*map2LabelSample{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.sampleL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.sampleL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.sampleL2s = append(m.sampleL2s, l2)
 	}
+	m.sampleL2s = append(m.sampleL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must3LabelCounterSample returns a function which assigns dedicated Sample
@@ -1149,44 +866,24 @@ func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) fu
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	m3 := new(map3LabelSample)
+	m3.name = name
+	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l3 *map3LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l3 = &map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + counterTypeLineEnd,
-			sampleL3s:   []*map3LabelSample{l3},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != counterType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, counterTypeLineEnd)
+	for _, o := range m.sampleL3s {
+		if o.labelNames == m3.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.sampleL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l3 = &map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.sampleL3s = append(m.sampleL3s, l3)
 	}
+	m.sampleL3s = append(m.sampleL3s, m3)
 
-	r.mutex.Unlock()
-	return l3.with
+	return m3.with
 }
 
 // Must1LabelGaugeSample returns a function which assigns dedicated Sample
@@ -1214,39 +911,24 @@ func Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Samp
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (r *Register) Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(labelName)
+	mustValidNames(name, labelName)
+
+	m1 := new(map1LabelSample)
+	m1.name = name
+	m1.labelName = labelName
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l1 *map1LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l1 = &map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL1s:   []*map1LabelSample{l1},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.sampleL1s {
+		if o.labelName == m1.labelName {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.sampleL1s {
-			if o.labelName == labelName {
-				panic("metrics: label already in use")
-			}
-		}
-		l1 = &map1LabelSample{map1Label: map1Label{
-			name: name, labelName: labelName}}
-		m.sampleL1s = append(m.sampleL1s, l1)
 	}
+	m.sampleL1s = append(m.sampleL1s, m1)
 
-	r.mutex.Unlock()
-	return l1.with
+	return m1.with
 }
 
 // Must2LabelGaugeSample returns a function which assigns dedicated Sample
@@ -1276,43 +958,24 @@ func Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	if label1Name > label2Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name)
+
+	m2 := new(map2LabelSample)
+	m2.name = name
+	m2.labelNames = [...]string{label1Name, label2Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l2 *map2LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l2 = &map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL2s:   []*map2LabelSample{l2},
-		})
-	} else {
-		m := r.metrics[index]
-		if m.typeID() != gaugeType {
-			panic("metrics: name in use as another type")
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.sampleL2s {
+		if o.labelNames == m2.labelNames {
+			panic("metrics: labels already in use")
 		}
-
-		for _, o := range m.sampleL2s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l2 = &map2LabelSample{map2Label: map2Label{
-			name: name, labelNames: [...]string{label1Name, label2Name}}}
-		m.sampleL2s = append(m.sampleL2s, l2)
 	}
+	m.sampleL2s = append(m.sampleL2s, m2)
 
-	r.mutex.Unlock()
-	return l2.with
+	return m2.with
 }
 
 // Must3LabelGaugeSample returns a function which assigns dedicated Sample
@@ -1342,47 +1005,65 @@ func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
 func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
-	mustValidName(name)
-	mustValidLabelName(label1Name)
-	mustValidLabelName(label2Name)
-	mustValidLabelName(label3Name)
-	if label1Name > label2Name || label2Name > label3Name {
-		panic("metrics: label name arguments aren't sorted")
-	}
+	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	m3 := new(map3LabelSample)
+	m3.name = name
+	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
 
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
-	var l3 *map3LabelSample
-	if index, ok := r.indices[name]; !ok {
-		l3 = &map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
+	m := r.mustMetric(name, gaugeTypeLineEnd)
+	for _, o := range m.sampleL3s {
+		if o.labelNames == m3.labelNames {
+			panic("metrics: labels already in use")
+		}
+	}
+	m.sampleL3s = append(m.sampleL3s, m3)
 
-		r.indices[name] = uint32(len(r.metrics))
-		r.metrics = append(r.metrics, &metric{
-			typeComment: typePrefix + name + gaugeTypeLineEnd,
-			sampleL3s:   []*map3LabelSample{l3},
-		})
-	} else {
+	return m3.with
+}
+
+func (r *Register) mustMetric(name, typeLineEnd string) *metric {
+	if index, ok := r.indices[name]; ok {
 		m := r.metrics[index]
-		if m.typeID() != gaugeType {
+		if m.typeID() != typeLineEnd[len(typeLineEnd)-2] {
 			panic("metrics: name in use as another type")
 		}
 
-		for _, o := range m.sampleL3s {
-			if o.labelNames[0] == label1Name && o.labelNames[1] == label2Name && o.labelNames[2] == label3Name {
-				panic("metrics: labels already in use")
-			}
-		}
-		l3 = &map3LabelSample{map3Label: map3Label{
-			name: name, labelNames: [...]string{label1Name, label2Name, label3Name}}}
-		m.sampleL3s = append(m.sampleL3s, l3)
+		return m
 	}
 
-	r.mutex.Unlock()
-	return l3.with
+	m := &metric{typeComment: typePrefix + name + typeLineEnd}
+
+	r.indices[name] = uint32(len(r.metrics))
+	r.metrics = append(r.metrics, m)
+
+	return m
 }
 
-func mustValidName(s string) {
+func mustValidNames(metricName string, labelNames ...string) {
+	mustValidMetricName(metricName)
+
+	var last string
+	for _, name := range labelNames {
+		if name <= last {
+			if name == "" {
+				panic("metrics: empty label name")
+			}
+			panic("metrics: label name arguments aren't sorted")
+		}
+		mustValidLabelName(name)
+		last = name
+	}
+}
+
+func mustValidMetricName(s string) {
+	if s == "" {
+		panic("metrics: empty name")
+	}
+
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c == ':' {
