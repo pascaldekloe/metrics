@@ -8,7 +8,7 @@ import (
 )
 
 func Example() {
-	Thermostat := metrics.MustReal("thermostat_celcius")
+	Thermostat := metrics.MustReal("thermostat_celcius", "")
 	Thermostat.Set(20)
 
 	Kitchen := metrics.Must1LabelReal("thermostat_celcius", "room")("kitchen")
@@ -18,7 +18,7 @@ func Example() {
 	Station("Amsterdam (Schiphol)", "KNMI").Set(11.2)
 	Station("London", "BBC").Set(9.6)
 
-	Delay := metrics.MustHistogram("db_delay_seconds", 1e-6, 2e-6, 5e-6)
+	Delay := metrics.MustHistogram("db_delay_seconds", "", 1e-6, 2e-6, 5e-6)
 	Delay.Add(0.00000391)
 	Delay.Add(0.00000024054)
 	Delay.Add(0.000002198)

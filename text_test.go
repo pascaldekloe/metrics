@@ -14,13 +14,11 @@ func TestServeHTTP(t *testing.T) {
 	SkipTimestamp = true
 	reg := NewRegister()
 
-	g1 := reg.MustReal("g1")
-	reg.MustHelp("g1", "🆘")
+	g1 := reg.MustReal("g1", "🆘")
 	g1.Set(42)
-	c1 := reg.MustCounter("c1")
+	c1 := reg.MustCounter("c1", "escape\n… and \\")
 	c1.Add(1)
 	c1.Add(8)
-	reg.MustHelp("c1", "escape\n… and \\")
 
 	rec := httptest.NewRecorder()
 	reg.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
@@ -91,25 +89,25 @@ func BenchmarkServeHTTP(b *testing.B) {
 		b.Run(strconv.Itoa(n), func(b *testing.B) {
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustCounter("integer" + strconv.Itoa(i) + "_bench_unit").Add(uint64(i))
+				reg.MustCounter("integer"+strconv.Itoa(i)+"_bench_unit", "").Add(uint64(i))
 			}
 			b.Run("counter", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustReal("real" + strconv.Itoa(i) + "_bench_unit").Set(float64(i))
+				reg.MustReal("real"+strconv.Itoa(i)+"_bench_unit", "").Set(float64(i))
 			}
 			b.Run("real", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustInteger("integer" + strconv.Itoa(i) + "_bench_unit").Set(int64(i))
+				reg.MustInteger("integer"+strconv.Itoa(i)+"_bench_unit", "").Set(int64(i))
 			}
 			b.Run("integer", benchmarkHTTPHandler)
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", 1, 2, 3, 4).Add(3.14)
+				reg.MustHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", "", 1, 2, 3, 4).Add(3.14)
 			}
 			b.Run("histogram5", benchmarkHTTPHandler)
 
@@ -127,7 +125,7 @@ func BenchmarkServeHTTP(b *testing.B) {
 
 			reg = NewRegister()
 			for i := n; i > 0; i-- {
-				reg.MustRealSample("real"+strconv.Itoa(i)+"_bench_unit").Set(float64(i), time.Now())
+				reg.MustRealSample("real"+strconv.Itoa(i)+"_bench_unit", "").Set(float64(i), time.Now())
 			}
 			b.Run("sample", benchmarkHTTPHandler)
 		})

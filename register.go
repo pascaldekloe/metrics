@@ -65,15 +65,18 @@ func NewRegister() *Register {
 // MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustCounter(name string) *Counter {
-	return std.MustCounter(name)
+// Help is an optional comment text.
+func MustCounter(name, help string) *Counter {
+	return std.MustCounter(name, help)
 }
 
 // MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustCounter(name string) *Counter {
+// Help is an optional comment text.
+func (r *Register) MustCounter(name, help string) *Counter {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -83,6 +86,7 @@ func (r *Register) MustCounter(name string) *Counter {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.counter = &Counter{prefix: name + " "}
 	return m.counter
 }
@@ -90,24 +94,28 @@ func (r *Register) MustCounter(name string) *Counter {
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustInteger(name string) *Integer {
-	return std.MustInteger(name)
+// Help is an optional comment text.
+func MustInteger(name, help string) *Integer {
+	return std.MustInteger(name, help)
 }
 
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustInteger(name string) *Integer {
+// Help is an optional comment text.
+func (r *Register) MustInteger(name, help string) *Integer {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	m := r.mustMetric(name, gaugeTypeLineEnd, integerID)
-	if m.integer != nil || m.real != nil {
+	if m.integer != nil {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.integer = &Integer{prefix: name + " "}
 	return m.integer
 }
@@ -115,24 +123,28 @@ func (r *Register) MustInteger(name string) *Integer {
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustReal(name string) *Real {
-	return std.MustReal(name)
+// Help is an optional comment text.
+func MustReal(name, help string) *Real {
+	return std.MustReal(name, help)
 }
 
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustReal(name string) *Real {
+// Help is an optional comment text.
+func (r *Register) MustReal(name, help string) *Real {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	m := r.mustMetric(name, gaugeTypeLineEnd, realID)
-	if m.integer != nil || m.real != nil {
+	if m.real != nil {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.real = &Real{prefix: name + " "}
 	return m.real
 }
@@ -142,8 +154,9 @@ func (r *Register) MustReal(name string) *Real {
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-func MustHistogram(name string, buckets ...float64) *Histogram {
-	return std.MustHistogram(name, buckets...)
+// Help is an optional comment text.
+func MustHistogram(name, help string, buckets ...float64) *Histogram {
+	return std.MustHistogram(name, help, buckets...)
 }
 
 // MustHistogram registers a new Histogram. Buckets define the upper
@@ -151,8 +164,10 @@ func MustHistogram(name string, buckets ...float64) *Histogram {
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
+// Help is an optional comment text.
+func (r *Register) MustHistogram(name, help string, buckets ...float64) *Histogram {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	h := newHistogram(name, buckets)
 	h.prefix(name)
@@ -165,6 +180,7 @@ func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.histogram = h
 	return h
 }
@@ -172,15 +188,18 @@ func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 // MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustRealSample(name string) *Sample {
-	return MustRealSample(name)
+// Help is an optional comment text.
+func MustRealSample(name, help string) *Sample {
+	return std.MustRealSample(name, help)
 }
 
 // MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustRealSample(name string) *Sample {
+// Help is an optional comment text.
+func (r *Register) MustRealSample(name, help string) *Sample {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -190,6 +209,7 @@ func (r *Register) MustRealSample(name string) *Sample {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.sample = &Sample{prefix: name + " "}
 	return m.sample
 }
@@ -197,15 +217,18 @@ func (r *Register) MustRealSample(name string) *Sample {
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func MustCounterSample(name string) *Sample {
-	return std.MustCounterSample(name)
+// Help is an optional comment text.
+func MustCounterSample(name, help string) *Sample {
+	return std.MustCounterSample(name, help)
 }
 
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-func (r *Register) MustCounterSample(name string) *Sample {
+// Help is an optional comment text.
+func (r *Register) MustCounterSample(name, help string) *Sample {
 	mustValidMetricName(name)
+	comment := helpComment(name, help)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -215,8 +238,8 @@ func (r *Register) MustCounterSample(name string) *Sample {
 		panic("metrics: name already in use")
 	}
 
+	m.helpComment = comment
 	m.sample = &Sample{prefix: name + " "}
-
 	return m.sample
 }
 
@@ -892,8 +915,6 @@ func mustValidLabelName(s string) {
 	}
 }
 
-var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
-
 // Help sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
 func MustHelp(name, text string) {
@@ -903,6 +924,24 @@ func MustHelp(name, text string) {
 // Help sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
 func (r *Register) MustHelp(name, text string) {
+	comment := helpComment(name, text)
+
+	r.mutex.Lock()
+	m := r.metrics[r.indices[name]]
+	if m == nil {
+		panic("metrics: name not in use")
+	}
+	m.helpComment = comment
+	r.mutex.Unlock()
+}
+
+var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
+
+func helpComment(name, text string) string {
+	if text == "" {
+		return text
+	}
+
 	var buf strings.Builder
 	buf.Grow(len(helpPrefix) + len(name) + len(text) + 2)
 	buf.WriteString(helpPrefix)
@@ -910,12 +949,5 @@ func (r *Register) MustHelp(name, text string) {
 	buf.WriteByte(' ')
 	helpEscapes.WriteString(&buf, text)
 	buf.WriteByte('\n')
-
-	r.mutex.Lock()
-	m := r.metrics[r.indices[name]]
-	if m == nil {
-		panic("metrics: name not in use")
-	}
-	m.helpComment = buf.String()
-	r.mutex.Unlock()
+	return buf.String()
 }
