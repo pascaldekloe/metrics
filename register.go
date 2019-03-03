@@ -5,8 +5,18 @@ import (
 	"sync"
 )
 
+const (
+	counterID = iota
+	counterSampleID
+	integerID
+	realID
+	gaugeSampleID
+	histogramID
+)
+
 // Metric is a named record.
 type metric struct {
+	typeID      uint
 	typeComment string
 	helpComment string
 
@@ -16,24 +26,24 @@ type metric struct {
 	histogram *Histogram
 	sample    *Sample
 
-	counterL1s   []*map1LabelCounter
-	counterL2s   []*map2LabelCounter
-	counterL3s   []*map3LabelCounter
-	integerL1s   []*map1LabelInteger
-	integerL2s   []*map2LabelInteger
-	integerL3s   []*map3LabelInteger
-	realL1s      []*map1LabelReal
-	realL2s      []*map2LabelReal
-	realL3s      []*map3LabelReal
-	histogramL1s []*map1LabelHistogram
-	histogramL2s []*map2LabelHistogram
-	sampleL1s    []*map1LabelSample
-	sampleL2s    []*map2LabelSample
-	sampleL3s    []*map3LabelSample
+	labels []*labelMapping
 }
 
-func (m *metric) typeID() byte {
-	return m.typeComment[len(m.typeComment)-2]
+func (m *metric) mustLabel(name, labelName1, labelName2, labelName3 string) *labelMapping {
+	entry := &labelMapping{
+		name:       name,
+		labelNames: [...]string{labelName1, labelName2, labelName3},
+	}
+
+	for _, o := range m.labels {
+		if o.labelNames == entry.labelNames {
+			panic("metrics: labels already in use")
+		}
+	}
+
+	m.labels = append(m.labels, entry)
+
+	return entry
 }
 
 var std = NewRegister()
@@ -54,25 +64,21 @@ func NewRegister() *Register {
 
 // MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Counter is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func MustCounter(name string) *Counter {
 	return std.MustCounter(name)
 }
 
 // MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Counter is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func (r *Register) MustCounter(name string) *Counter {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
+	m := r.mustMetric(name, counterTypeLineEnd, counterID)
 	if m.counter != nil {
 		panic("metrics: name already in use")
 	}
@@ -83,25 +89,21 @@ func (r *Register) MustCounter(name string) *Counter {
 
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a gauge
-// is registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func MustInteger(name string) *Integer {
 	return std.MustInteger(name)
 }
 
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a gauge
-// is registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func (r *Register) MustInteger(name string) *Integer {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
+	m := r.mustMetric(name, gaugeTypeLineEnd, integerID)
 	if m.integer != nil || m.real != nil {
 		panic("metrics: name already in use")
 	}
@@ -112,25 +114,21 @@ func (r *Register) MustInteger(name string) *Integer {
 
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a gauge
-// is registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func MustReal(name string) *Real {
 	return std.MustReal(name)
 }
 
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a gauge
-// is registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func (r *Register) MustReal(name string) *Real {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
+	m := r.mustMetric(name, gaugeTypeLineEnd, realID)
 	if m.integer != nil || m.real != nil {
 		panic("metrics: name already in use")
 	}
@@ -162,7 +160,7 @@ func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, histogramTypeLineEnd)
+	m := r.mustMetric(name, histogramTypeLineEnd, histogramID)
 	if m.histogram != nil {
 		panic("metrics: name already in use")
 	}
@@ -173,25 +171,21 @@ func (r *Register) MustHistogram(name string, buckets ...float64) *Histogram {
 
 // MustGaugeSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Gauge is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func MustGaugeSample(name string) *Sample {
 	return MustGaugeSample(name)
 }
 
 // MustGaugeSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Gauge is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func (r *Register) MustGaugeSample(name string) *Sample {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
+	m := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
@@ -202,25 +196,21 @@ func (r *Register) MustGaugeSample(name string) *Sample {
 
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Counter is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func MustCounterSample(name string) *Sample {
 	return std.MustCounterSample(name)
 }
 
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Combinations with Sample and the various
-// label options are allowed though. The Sample is ignored once a Counter is
-// registered under the same name. This fallback allows warm starts.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 func (r *Register) MustCounterSample(name string) *Sample {
 	mustValidMetricName(name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
+	m := r.mustMetric(name, counterTypeLineEnd, counterSampleID)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
@@ -257,22 +247,11 @@ func Must1LabelCounter(name, labelName string) func(labelValue string) *Counter 
 func (r *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
 	mustValidNames(name, labelName)
 
-	m1 := new(map1LabelCounter)
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, labelName, "", "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.counterL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.counterL1s = append(m.counterL1s, m1)
-
-	return m1.with
+	return l.counter1
 }
 
 // Must2LabelCounter returns a function which assigns dedicated Counter
@@ -304,22 +283,11 @@ func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, la
 func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := new(map2LabelCounter)
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.counterL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.counterL2s = append(m.counterL2s, m2)
-
-	return m2.with
+	return l.counter2
 }
 
 // Must3LabelCounter returns a function which assigns dedicated Counter
@@ -351,22 +319,11 @@ func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(lab
 func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	m3 := new(map3LabelCounter)
-	m3.name = name
-	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, label3Name)
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.counterL3s {
-		if o.labelNames == m3.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.counterL3s = append(m.counterL3s, m3)
-
-	return m3.with
+	return l.counter3
 }
 
 // Must1LabelInteger returns a function which assigns dedicated Integer
@@ -396,22 +353,11 @@ func Must1LabelInteger(name, labelName string) func(labelValue string) *Integer 
 func (r *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
 	mustValidNames(name, labelName)
 
-	m1 := new(map1LabelInteger)
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, labelName, "", "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.integerL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.integerL1s = append(m.integerL1s, m1)
-
-	return m1.with
+	return l.integer1
 }
 
 // Must2LabelInteger returns a function which assigns dedicated Integer
@@ -443,22 +389,11 @@ func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, la
 func (r *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := new(map2LabelInteger)
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.integerL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.integerL2s = append(m.integerL2s, m2)
-
-	return m2.with
+	return l.integer2
 }
 
 // Must3LabelInteger returns a function which assigns dedicated Integer
@@ -490,22 +425,11 @@ func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(lab
 func (r *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	m3 := new(map3LabelInteger)
-	m3.name = name
-	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, label3Name)
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.integerL3s {
-		if o.labelNames == m3.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.integerL3s = append(m.integerL3s, m3)
-
-	return m3.with
+	return l.integer3
 }
 
 // Must1LabelReal returns a function which assigns dedicated Real
@@ -535,22 +459,11 @@ func Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 func (r *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 	mustValidNames(name, labelName)
 
-	m1 := new(map1LabelReal)
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, labelName, "", "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.realL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.realL1s = append(m.realL1s, m1)
-
-	return m1.with
+	return l.real1
 }
 
 // Must2LabelReal returns a function which assigns dedicated Real
@@ -582,22 +495,11 @@ func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label
 func (r *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := new(map2LabelReal)
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.realL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.realL2s = append(m.realL2s, m2)
-
-	return m2.with
+	return l.real2
 }
 
 // Must3LabelReal returns a function which assigns dedicated Real
@@ -629,22 +531,11 @@ func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1
 func (r *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	m3 := new(map3LabelReal)
-	m3.name = name
-	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, label3Name)
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.realL3s {
-		if o.labelNames == m3.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.realL3s = append(m.realL3s, m3)
-
-	return m3.with
+	return l.real3
 }
 
 // Must1LabelHistogram returns a function which assigns dedicated Histogram
@@ -678,22 +569,12 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
 	mustValidNames(name, labelName)
 
-	m1 := &map1LabelHistogram{buckets: buckets}
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
+	l.buckets = buckets
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, histogramTypeLineEnd)
-	for _, o := range m.histogramL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.histogramL1s = append(m.histogramL1s, m1)
-
-	return m1.with
+	return l.histogram1
 }
 
 // Must2LabelHistogram returns a function which assigns dedicated Histogram
@@ -729,22 +610,12 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := &map2LabelHistogram{buckets: buckets}
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
+	l.buckets = buckets
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, histogramTypeLineEnd)
-	for _, o := range m.histogramL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.histogramL2s = append(m.histogramL2s, m2)
-
-	return m2.with
+	return l.histogram2
 }
 
 // Must1LabelCounterSample returns a function which assigns dedicated Sample
@@ -774,22 +645,11 @@ func Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sa
 func (r *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidNames(name, labelName)
 
-	m1 := new(map1LabelSample)
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, labelName, "", "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.sampleL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL1s = append(m.sampleL1s, m1)
-
-	return m1.with
+	return l.sample1
 }
 
 // Must2LabelCounterSample returns a function which assigns dedicated Sample
@@ -821,22 +681,11 @@ func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Val
 func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := new(map2LabelSample)
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.sampleL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL2s = append(m.sampleL2s, m2)
-
-	return m2.with
+	return l.sample2
 }
 
 // Must3LabelCounterSample returns a function which assigns dedicated Sample
@@ -868,22 +717,11 @@ func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) fu
 func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	m3 := new(map3LabelSample)
-	m3.name = name
-	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd)
-	for _, o := range m.sampleL3s {
-		if o.labelNames == m3.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL3s = append(m.sampleL3s, m3)
-
-	return m3.with
+	return l.sample3
 }
 
 // Must1LabelGaugeSample returns a function which assigns dedicated Sample
@@ -913,22 +751,11 @@ func Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Samp
 func (r *Register) Must1LabelGaugeSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidNames(name, labelName)
 
-	m1 := new(map1LabelSample)
-	m1.name = name
-	m1.labelName = labelName
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, labelName, "", "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.sampleL1s {
-		if o.labelName == m1.labelName {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL1s = append(m.sampleL1s, m1)
-
-	return m1.with
+	return l.sample1
 }
 
 // Must2LabelGaugeSample returns a function which assigns dedicated Sample
@@ -960,22 +787,11 @@ func Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value
 func (r *Register) Must2LabelGaugeSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
-	m2 := new(map2LabelSample)
-	m2.name = name
-	m2.labelNames = [...]string{label1Name, label2Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, label1Name, label2Name, "")
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.sampleL2s {
-		if o.labelNames == m2.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL2s = append(m.sampleL2s, m2)
-
-	return m2.with
+	return l.sample2
 }
 
 // Must3LabelGaugeSample returns a function which assigns dedicated Sample
@@ -1007,35 +823,24 @@ func Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func
 func (r *Register) Must3LabelGaugeSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	m3 := new(map3LabelSample)
-	m3.name = name
-	m3.labelNames = [...]string{label1Name, label2Name, label3Name}
-
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	l := r.mustMetric(name, gaugeTypeLineEnd, gaugeSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	r.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd)
-	for _, o := range m.sampleL3s {
-		if o.labelNames == m3.labelNames {
-			panic("metrics: labels already in use")
-		}
-	}
-	m.sampleL3s = append(m.sampleL3s, m3)
-
-	return m3.with
+	return l.sample3
 }
 
-func (r *Register) mustMetric(name, typeLineEnd string) *metric {
+func (r *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
 	if index, ok := r.indices[name]; ok {
 		m := r.metrics[index]
-		if m.typeID() != typeLineEnd[len(typeLineEnd)-2] {
+		if m.typeID != typeID {
 			panic("metrics: name in use as another type")
 		}
 
 		return m
 	}
 
-	m := &metric{typeComment: typePrefix + name + typeLineEnd}
+	m := &metric{typeComment: typePrefix + name + typeLineEnd, typeID: typeID}
 
 	r.indices[name] = uint32(len(r.metrics))
 	r.metrics = append(r.metrics, m)
