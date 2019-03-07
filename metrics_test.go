@@ -84,55 +84,21 @@ func TestHistogramBuckets(t *testing.T) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	b.Run("counter", func(b *testing.B) {
-		c := NewRegister().MustCounter("bench_counter_unit", "")
+	b.Run("histogram5", func(b *testing.B) {
+		h := NewRegister().MustHistogram("bench_histogram_unit", "", .01, .02, .05, .1)
 
 		b.Run("sequential", func(b *testing.B) {
+			var buckets []uint64
 			for i := 0; i < b.N; i++ {
-				c.Get()
+				buckets, _, _ = h.Get(buckets[:0])
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			b.SetParallelism(2)
 			b.RunParallel(func(pb *testing.PB) {
+				var buckets []uint64
 				for pb.Next() {
-					c.Get()
-				}
-			})
-		})
-	})
-
-	b.Run("real", func(b *testing.B) {
-		r := NewRegister().MustReal("bench_real_unit", "")
-
-		b.Run("sequential", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				r.Get()
-			}
-		})
-		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					r.Get()
-				}
-			})
-		})
-	})
-
-	b.Run("sample", func(b *testing.B) {
-		r := NewRegister().MustRealSample("bench_sample_unit", "")
-
-		b.Run("sequential", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				r.Get()
-			}
-		})
-		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					r.Get()
+					buckets, _, _ = h.Get(buckets[:0])
 				}
 			})
 		})
