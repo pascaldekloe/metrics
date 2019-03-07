@@ -40,7 +40,7 @@ const (
 
 // Counter is a cumulative metric that represents a single monotonically
 // increasing counter whose value can only increase or be reset to zero on
-// restart.
+// restart. The default/initial value is zero.
 // Multiple goroutines may invoke methods on a Counter simultaneously.
 type Counter struct {
 	// value first due atomic alignment requirement
@@ -50,7 +50,7 @@ type Counter struct {
 }
 
 // Integer gauge is a metric that represents a single numerical value that can
-// arbitrarily go up and down.
+// arbitrarily go up and down. The default/initial value is zero.
 // Multiple goroutines may invoke methods on a Integer simultaneously.
 type Integer struct {
 	// value first due atomic alignment requirement
@@ -60,7 +60,7 @@ type Integer struct {
 }
 
 // Real gauge is a metric that represents a single numerical value that can
-// arbitrarily go up and down.
+// arbitrarily go up and down. The default/initial value is zero.
 // Multiple goroutines may invoke methods on a Real simultaneously.
 type Real struct {
 	// value first due atomic alignment requirement
@@ -71,7 +71,9 @@ type Real struct {
 
 // Sample is a specialised metric for measurement captures, as opposed to
 // holding the current value at all times. The precision is enhanced with
-// a timestamp, at the cost of performance degradation.
+// a timestamp, at the cost of performance degradation. Serialisation
+// omits samples with a zero timestamp. The default/initial value is zero
+// with a zero timestamp.
 // Multiple goroutines may invoke methods on a Sample simultaneously.
 type Sample struct {
 	// value holds the last measurement
@@ -265,8 +267,9 @@ func (h *Histogram) prefix(name string) {
 }
 
 // Get returns the current value. The buckets return is the observation count
-// for each corresponding Histogram.BucketBounds element and count is the total
-// observation count.
+// for each corresponding Histogram.BucketBounds element, appended to the the
+// bucketAppend argument (which may be nil). The count return has the total
+// observation count, a.k.a. the positive inifinity bucket.
 func (h *Histogram) Get(bucketAppend []uint64) (buckets []uint64, count uint64, sum float64) {
 	buckets = bucketAppend
 
