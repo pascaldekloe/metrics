@@ -5,12 +5,15 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pascaldekloe/metrics"
 )
 
 func TestCapture(t *testing.T) {
-	Capture()
+	close(CaptureEvery(time.Minute))
+	// await capture + cancel
+	time.Sleep(10*time.Millisecond)
 
 	var buf bytes.Buffer
 	metrics.WriteText(&buf)

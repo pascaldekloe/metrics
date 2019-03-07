@@ -1,13 +1,6 @@
-// Package gostat provides Go runtime statistics.
-// The metrics may be applied with something like the following:
+// Package gostat provides Go statistics to the default registry.
 //
-//	go func() {
-//		for range time.Tick(time.Minute) {
-//			gostat.Capture()
-//		}
-//	}
-//
-// The bindings are equivalent to the standard client's implementation.
+// The bindings are equivalent to the standard client implementation.
 // See the prometheus.NewGoCollector function documentation for details.
 package gostat
 
@@ -20,10 +13,13 @@ import (
 
 func init() {
 	metrics.MustHelp("go_info", "Information about the Go environment.")
-	// fixed value
 	GoInfo.Set(1)
 }
 
+// GoInfo is set to 1.
+var GoInfo = metrics.Must1LabelInteger("go_info", "version")(runtime.Version())
+
+// Runtime Samples
 var (
 	NumGoroutine = metrics.MustRealSample("go_goroutines", "Number of goroutines that currently exist.")
 	ThreadCreate = metrics.MustRealSample("go_threads", "Number of OS threads created.")
@@ -31,11 +27,9 @@ var (
 	// BUG(pascaldekloe): go_gc_duration_seconds not implemented
 
 	// GCPause = metrics.MustSummarySample("go_gc_duration_seconds", "A summary of the GC invocation durations.")
-
-	GoInfo = metrics.Must1LabelInteger("go_info", "version")(runtime.Version())
 )
 
-// Runtime MemStats Copies
+// Memory Allocation Samples
 var (
 	Alloc         = metrics.MustRealSample("go_memstats_alloc_bytes", "Number of bytes allocated and still in use.")
 	TotalAlloc    = metrics.MustCounterSample("go_memstats_alloc_bytes_total", "Total number of bytes allocated, even if freed.")
@@ -63,16 +57,15 @@ var (
 	GCCPUFraction = metrics.MustRealSample("go_memstats_gc_cpu_fraction", "The fraction of this program's available CPU time used by the GC since the program started.")
 )
 
-// Capture updates the Samples.
+// Capture updates the samples.
 func Capture() {
-	timestamp := time.Now()
-	NumGoroutine.Set(float64(runtime.NumGoroutine()), timestamp)
+	NumGoroutine.Set(float64(runtime.NumGoroutine()), time.Now())
 	recordCount, _ := runtime.ThreadCreateProfile(nil)
-	ThreadCreate.Set(float64(recordCount), timestamp)
+	ThreadCreate.Set(float64(recordCount), time.Now())
 
 	stats := new(runtime.MemStats)
 	runtime.ReadMemStats(stats)
-	timestamp = time.Now()
+	timestamp := time.Now()
 
 	Alloc.Set(float64(stats.Alloc), timestamp)
 	TotalAlloc.Set(float64(stats.TotalAlloc), timestamp)
@@ -98,4 +91,28 @@ func Capture() {
 	NextGC.Set(float64(stats.NextGC), timestamp)
 	LastGC.Set(float64(stats.LastGC)/1e9, timestamp)
 	GCCPUFraction.Set(stats.GCCPUFraction, timestamp)
+}
+
+// CaptureEvery updates the samples with an interval, starting now.
+// The routine terminates with a send or close on cancel.
+func CaptureEvery(interval time.Duration) (cancel chan<- struct{}) {
+	ch := make(chan struct{})
+
+	go func() {
+		Capture()
+
+		ticker := time.NewTicker(interval)
+		for {
+			select {
+			case <-ticker.C:
+				Capture()
+
+			case <-ch:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	return ch
 }
