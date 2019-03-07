@@ -13,7 +13,7 @@ import (
 func TestCapture(t *testing.T) {
 	close(CaptureEvery(time.Minute))
 	// await capture + cancel
-	time.Sleep(10*time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	var buf bytes.Buffer
 	metrics.WriteText(&buf)
