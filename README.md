@@ -2,7 +2,18 @@
 
 A Prometheus exposition library for the Go programming language.
 
-Setup as `http.HandleFunc("/metrics", metrics.ServeHTTP)` and define metrics like `var RequestCount = metrics.MustCounter("rpc_requests_total", "Number of service invocations.")`.
+```go
+var ConnCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
+
+func main() {
+	// include default metrics
+	gostat.CaptureEvery(time.Minute)
+	// mount exposition point
+	http.HandleFunc("/metrics", metrics.ServeHTTP)
+
+	// …
+}
+```
 
 This is free and unencumbered software released into the
 [public domain](https://creativecommons.org/publicdomain/zero/1.0).

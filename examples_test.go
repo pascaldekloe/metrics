@@ -7,32 +7,30 @@ import (
 	"github.com/pascaldekloe/metrics"
 )
 
-// Basic Types
+// Basic Types & Exposition Order
 func Example() {
+	// setup
 	Uptime := metrics.MustCounterSample("db_uptime_seconds", "")
-	Uptime.Set(0, time.Now()) // set on ready
-
 	Disk := metrics.MustRealSample("disk_usage_ratio", "Sectors of the total capacity.")
-	Disk.Set(.47, time.Now()) // periodic OS call
-
 	Size := metrics.MustCounter("db_response_bytes_total", "Raw size of the lookup.")
-	Size.Add(812) // written amount
-
 	Cache := metrics.MustInteger("db_cache_queries", "Number of query answers in cache.")
-	Cache.Set(1000) // warm start
-	Cache.Add(1)    // new entry
-	Cache.Add(-900) // expiry sweep
-
 	Backup := metrics.MustReal("db_backup_seconds", "Duration of the last backup.")
-	Backup.Set(4.665)
-
 	Delay := metrics.MustHistogram("db_delay_seconds", "Duration until response available.", 1e-6, 2e-6, 5e-6)
+
+	// measures
+	Uptime.Set(0, time.Now()) // set on ready
+	Cache.Set(1000)           // warm start
 	Delay.Add(0.00000391)
 	Delay.Add(0.00000024054)
 	Delay.Add(0.000002198)
 	Delay.Add(0.000573708)
+	Cache.Add(1)              // new entry
+	Size.Add(812)             // written amount
+	Cache.Add(-900)           // expiry sweep
+	Disk.Set(.47, time.Now()) // periodic OS call
+	Backup.Set(4.665)
 
-	// print samples
+	// print
 	metrics.SkipTimestamp = true
 	metrics.WriteText(os.Stdout)
 	// Output:
@@ -69,15 +67,16 @@ func Example() {
 
 // Label Combination
 func Example_labels() {
+	// setup
 	demo := metrics.NewRegister()
 	Building := demo.Must2LabelInteger("health_hitpoints_total", "building", "ground")
 	Unit := demo.Must3LabelInteger("health_hitpoints_total", "ground", "side", "unit")
 	demo.MustHelp("health_hitpoints_total", "Damage Capacity")
 
-	// launch
+	// measures
 	Unit("Genisis Pit", "Nod", "Artilery").Set(300)
 	Unit("Genisis Pit", "Nod", "Cyborg").Set(900)
-	Building("Civilian Hospital", "Genisis Pit").Add(800)
+	Building("Civilian Hospital", "Genisis Pit").Set(800)
 	// attack
 	Unit("Genisis Pit", "Nod", "Cyborg").Add(-596)
 	Building("Civilian Hospital", "Genisis Pit").Add(-490)
@@ -85,6 +84,7 @@ func Example_labels() {
 	Unit("Genisis Pit", "Nod", "Artilery").Add(-24)
 	Unit("Genisis Pit", "Nod", "Cyborg").Add(110)
 
+	// print
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
 	// Output:
@@ -97,8 +97,9 @@ func Example_labels() {
 	// health_hitpoints_total{ground="Genisis Pit",side="Nod",unit="Cyborg"} 414
 }
 
-// Fixed Label Assignment
-func Example_fixedLabels() {
+// Fixed Assignment & Default Values
+func Example_labelsFix() {
+	// setup
 	demo := metrics.NewRegister()
 	measured := demo.Must2LabelRealSample("measured_celcius", "room", "source")
 	setpoint := demo.Must1LabelReal("setpoint_celcius", "room")
@@ -106,27 +107,31 @@ func Example_fixedLabels() {
 	heated := demo.Must1LabelCounterSample("radiator_joules_total", "room")
 	cycles := demo.Must1LabelCounter("cycles_total", "room")
 
-	rooms := [2]struct {
+	// label composition
+	roomNames := [...]string{"bedroom", "kitchen"}
+	rooms := [len(roomNames)]struct {
 		Measured *metrics.Sample
 		Setpoint *metrics.Real
 		Heating  *metrics.Integer
 		Heated   *metrics.Sample
 		Cycles   *metrics.Counter
 	}{}
-	for i, label := range []string{"bedroom", "kitchen"} {
-		rooms[i].Measured = measured(label, "thermostat")
-		rooms[i].Setpoint = setpoint(label)
-		rooms[i].Heating = heating(label)
-		rooms[i].Heated = heated(label)
-		rooms[i].Cycles = cycles(label)
+	for i, name := range roomNames {
+		rooms[i].Measured = measured(name, "thermostat")
+		rooms[i].Setpoint = setpoint(name)
+		rooms[i].Heating = heating(name)
+		rooms[i].Heated = heated(name)
+		rooms[i].Cycles = cycles(name)
 	}
 
+	// measures
 	rooms[0].Measured.Set(16.3, time.Date(2019, 2, 20, 17, 59, 46, 0, time.UTC))
 	rooms[0].Setpoint.Set(19)
 	rooms[0].Cycles.Add(1)
 	rooms[0].Heated.Set(.27, time.Now())
 	rooms[0].Heating.Set(1105)
 
+	// print
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
 	// Output:
@@ -152,17 +157,19 @@ func Example_fixedLabels() {
 }
 
 func ExampleMust1LabelHistogram() {
+	// setup
 	demo := metrics.NewRegister()
-
 	Duration := demo.Must1LabelHistogram("http_latency_seconds", "method", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
+	// measures
 	Duration("GET").Add(0.0768753)
 	Duration("OPTIONS").Add(0.0001414)
 	Duration("GET").Add(0.0022779)
 	Duration("GET").Add(0.0018714)
 	Duration("GET").Add(0.0023789)
 
+	// print
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
 	// Output:
@@ -185,17 +192,19 @@ func ExampleMust1LabelHistogram() {
 }
 
 func ExampleMust2LabelHistogram() {
+	// setup
 	demo := metrics.NewRegister()
-
 	Duration := demo.Must2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.01, 0.01)
 	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
 
+	// measures
 	Duration("GET", "2xx").Add(0.0768753)
 	Duration("GET", "3xx").Add(0.0001414)
 	Duration("GET", "2xx").Add(0.0022779)
 	Duration("GET", "2xx").Add(0.0018714)
 	Duration("GET", "2xx").Add(0.0023789)
 
+	// print samples
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
 	// Output:
