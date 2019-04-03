@@ -93,14 +93,20 @@ func BenchmarkGet(b *testing.B) {
 				buckets, _, _ = h.Get(buckets[:0])
 			}
 		})
+
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
+			done := make(chan []uint64)
+			f := func() {
 				var buckets []uint64
-				for pb.Next() {
+				for i := b.N / 2; i >= 0; i-- {
 					buckets, _, _ = h.Get(buckets[:0])
 				}
-			})
+				done <- buckets
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 }
@@ -115,12 +121,17 @@ func BenchmarkSet(b *testing.B) {
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
+			done := make(chan struct{})
+			f := func() {
+				for i := b.N / 2; i >= 0; i-- {
 					r.Set(42)
 				}
-			})
+				done <- struct{}{}
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 
@@ -134,12 +145,17 @@ func BenchmarkSet(b *testing.B) {
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
+			done := make(chan struct{})
+			f := func() {
+				for i := b.N / 2; i >= 0; i-- {
 					r.Set(42, timestamp)
 				}
-			})
+				done <- struct{}{}
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 }
@@ -154,12 +170,17 @@ func BenchmarkAdd(b *testing.B) {
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
+			done := make(chan struct{})
+			f := func() {
+				for i := b.N / 2; i >= 0; i-- {
 					c.Add(1)
 				}
-			})
+				done <- struct{}{}
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 
@@ -172,12 +193,17 @@ func BenchmarkAdd(b *testing.B) {
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
+			done := make(chan struct{})
+			f := func() {
+				for i := b.N / 2; i >= 0; i-- {
 					g.Add(1)
 				}
-			})
+				done <- struct{}{}
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 
@@ -192,14 +218,19 @@ func BenchmarkAdd(b *testing.B) {
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
-			b.SetParallelism(2)
-			b.RunParallel(func(pb *testing.PB) {
+			done := make(chan struct{})
+			f := func() {
 				f := .001
-				for pb.Next() {
+				for i := b.N / 2; i >= 0; i-- {
 					h.Add(f)
 					f += .001
 				}
-			})
+				done <- struct{}{}
+			}
+			go f()
+			go f()
+			<-done
+			<-done
 		})
 	})
 }
