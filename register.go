@@ -151,7 +151,7 @@ func (reg *Register) MustReal(name, help string) *Real {
 }
 
 // MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending ordereg. Special cases not-a-number
+// boundaries, preferably in ascending order. Special cases not-a-number
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
@@ -161,7 +161,7 @@ func MustHistogram(name, help string, buckets ...float64) *Histogram {
 }
 
 // MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending ordereg. Special cases not-a-number
+// boundaries, preferably in ascending order. Special cases not-a-number
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
@@ -287,8 +287,7 @@ func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue s
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	return std.Must2LabelCounter(name, label1Name, label2Name)
 }
@@ -302,16 +301,24 @@ func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, la
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
-	return l.counter2
+	if flip {
+		return l.counter21
+	}
+	return l.counter12
 }
 
 // Must3LabelCounter returns a function which assigns dedicated Counter
@@ -323,8 +330,7 @@ func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	return std.Must3LabelCounter(name, label1Name, label2Name, label3Name)
 }
@@ -338,16 +344,32 @@ func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(lab
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
-	return l.counter3
+	switch order {
+	case order123:
+		return l.counter123
+	case order132:
+		return l.counter132
+	case order213:
+		return l.counter213
+	case order231:
+		return l.counter231
+	case order312:
+		return l.counter312
+	case order321:
+		return l.counter321
+	default:
+		panic(order)
+	}
 }
 
 // Must1LabelInteger returns a function which assigns dedicated Integer
@@ -393,8 +415,7 @@ func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue s
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	return std.Must2LabelInteger(name, label1Name, label2Name)
 }
@@ -408,16 +429,24 @@ func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, la
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
-	return l.integer2
+	if flip {
+		return l.integer21
+	}
+	return l.integer12
 }
 
 // Must3LabelInteger returns a function which assigns dedicated Integer
@@ -429,8 +458,7 @@ func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	return std.Must3LabelInteger(name, label1Name, label2Name, label3Name)
 }
@@ -444,16 +472,32 @@ func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(lab
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
-	return l.integer3
+	switch order {
+	case order123:
+		return l.integer123
+	case order132:
+		return l.integer132
+	case order213:
+		return l.integer213
+	case order231:
+		return l.integer231
+	case order312:
+		return l.integer312
+	case order321:
+		return l.integer321
+	default:
+		panic(order)
+	}
 }
 
 // Must1LabelReal returns a function which assigns dedicated Real
@@ -499,8 +543,7 @@ func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue stri
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	return std.Must2LabelReal(name, label1Name, label2Name)
 }
@@ -514,16 +557,24 @@ func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
-	return l.real2
+	if flip {
+		return l.real21
+	}
+	return l.real12
 }
 
 // Must3LabelReal returns a function which assigns dedicated Real
@@ -535,8 +586,7 @@ func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(la
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	return std.Must3LabelReal(name, label1Name, label2Name, label3Name)
 }
@@ -550,23 +600,39 @@ func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
-	return l.real3
+	switch order {
+	case order123:
+		return l.real123
+	case order132:
+		return l.real132
+	case order213:
+		return l.real213
+	case order231:
+		return l.real231
+	case order312:
+		return l.real312
+	case order321:
+		return l.real321
+	default:
+		panic(order)
+	}
 }
 
 // Must1LabelHistogram returns a function which assigns dedicated Histogram
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending ordereg.
+// Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -582,7 +648,7 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending ordereg.
+// Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -605,15 +671,14 @@ func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...floa
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending ordereg.
+// Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
 }
@@ -622,24 +687,32 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending ordereg.
+// Buckets define the upper boundaries, preferably in ascending order.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
 	l.buckets = buckets
 	reg.mutex.Unlock()
 
-	return l.histogram2
+	if flip {
+		return l.histogram21
+	}
+	return l.histogram12
 }
 
 // Must1LabelCounterSample returns a function which assigns dedicated Sample
@@ -685,8 +758,7 @@ func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelV
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	return std.Must2LabelCounterSample(name, label1Name, label2Name)
 }
@@ -700,16 +772,24 @@ func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Val
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
-	return l.sample2
+	if flip {
+		return l.sample21
+	}
+	return l.sample12
 }
 
 // Must3LabelCounterSample returns a function which assigns dedicated Sample
@@ -721,8 +801,7 @@ func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	return std.Must3LabelCounterSample(name, label1Name, label2Name, label3Name)
 }
@@ -736,16 +815,32 @@ func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) fu
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
-	return l.sample3
+	switch order {
+	case order123:
+		return l.sample123
+	case order132:
+		return l.sample132
+	case order213:
+		return l.sample213
+	case order231:
+		return l.sample231
+	case order312:
+		return l.sample312
+	case order321:
+		return l.sample321
+	default:
+		panic(order)
+	}
 }
 
 // Must1LabelRealSample returns a function which assigns dedicated Sample
@@ -791,8 +886,7 @@ func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValu
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	return std.Must2LabelRealSample(name, label1Name, label2Name)
 }
@@ -806,16 +900,24 @@ func Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value,
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
-	return l.sample2
+	if flip {
+		return l.sample21
+	}
+	return l.sample12
 }
 
 // Must3LabelRealSample returns a function which assigns dedicated Sample
@@ -827,8 +929,7 @@ func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) f
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	return std.Must3LabelRealSample(name, label1Name, label2Name, label3Name)
 }
@@ -842,16 +943,32 @@ func Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(
 // (1) name in use as another metric type,
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names do not appear in ascending order or
-// (5) the label names are already in use.
+// (4) the label names are already in use.
 func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
+
+	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
 	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
-	return l.sample3
+	switch order {
+	case order123:
+		return l.sample123
+	case order132:
+		return l.sample132
+	case order213:
+		return l.sample213
+	case order231:
+		return l.sample231
+	case order312:
+		return l.sample312
+	case order321:
+		return l.sample321
+	default:
+		panic(order)
+	}
 }
 
 func (reg *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
@@ -875,16 +992,8 @@ func (reg *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
 func mustValidNames(metricName string, labelNames ...string) {
 	mustValidMetricName(metricName)
 
-	var last string
 	for _, name := range labelNames {
-		if name <= last {
-			if name == "" {
-				panic("metrics: empty label name")
-			}
-			panic("metrics: label name arguments aren't sorted")
-		}
 		mustValidLabelName(name)
-		last = name
 	}
 }
 
@@ -905,6 +1014,10 @@ func mustValidMetricName(s string) {
 }
 
 func mustValidLabelName(s string) {
+	if s == "" {
+		panic("metrics: empty label name")
+	}
+
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' {
@@ -934,6 +1047,41 @@ func (reg *Register) MustHelp(name, text string) {
 	}
 	m.helpComment = comment
 	reg.mutex.Unlock()
+}
+
+const (
+	order123 = iota
+	order132
+	order213
+	order231
+	order312
+	order321
+)
+
+func sort3(s1, s2, s3 *string) (order int) {
+	if *s1 < *s2 {
+		if *s2 < *s3 {
+			order = order123
+		} else if *s1 < *s3 {
+			*s2, *s3 = *s3, *s2
+			order = order132
+		} else {
+			*s1, *s2, *s3 = *s3, *s1, *s2
+			order = order312
+		}
+	} else {
+		if *s1 < *s3 {
+			*s1, *s2 = *s2, *s1
+			order = order213
+		} else if *s2 < *s3 {
+			*s1, *s2, *s3 = *s2, *s3, *s1
+			order = order231
+		} else {
+			*s1, *s3 = *s3, *s1
+			order = order321
+		}
+	}
+	return
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)

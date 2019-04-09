@@ -69,20 +69,19 @@ func Example() {
 func Example_labels() {
 	// setup
 	demo := metrics.NewRegister()
-	Building := demo.Must2LabelInteger("health_hitpoints_total", "building", "ground")
-	Unit := demo.Must3LabelInteger("health_hitpoints_total", "ground", "side", "unit")
-	demo.MustHelp("health_hitpoints_total", "Damage Capacity")
+	Building := demo.Must2LabelInteger("hitpoints_total", "ground", "building")
+	Arsenal := demo.Must3LabelInteger("hitpoints_total", "ground", "arsenal", "side")
+	demo.MustHelp("hitpoints_total", "Damage Capacity")
 
 	// measures
-	Unit("Genisis Pit", "Nod", "Artilery").Set(300)
-	Unit("Genisis Pit", "Nod", "Cyborg").Set(900)
-	Building("Civilian Hospital", "Genisis Pit").Set(800)
+	Building("Genesis Pit", "Civilian Hospital").Set(800)
+	Arsenal("Genesis Pit", "Tech Center", "Nod").Set(500)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Set(900)
 	// attack
-	Unit("Genisis Pit", "Nod", "Cyborg").Add(-596)
-	Building("Civilian Hospital", "Genisis Pit").Add(-490)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(-596)
+	Building("Genesis Pit", "Civilian Hospital").Add(-490)
 	// tiberium
-	Unit("Genisis Pit", "Nod", "Artilery").Add(-24)
-	Unit("Genisis Pit", "Nod", "Cyborg").Add(110)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(110)
 
 	// print
 	metrics.SkipTimestamp = true
@@ -90,11 +89,11 @@ func Example_labels() {
 	// Output:
 	// # Prometheus Samples
 	//
-	// # TYPE health_hitpoints_total gauge
-	// # HELP health_hitpoints_total Damage Capacity
-	// health_hitpoints_total{building="Civilian Hospital",ground="Genisis Pit"} 310
-	// health_hitpoints_total{ground="Genisis Pit",side="Nod",unit="Artilery"} 276
-	// health_hitpoints_total{ground="Genisis Pit",side="Nod",unit="Cyborg"} 414
+	// # TYPE hitpoints_total gauge
+	// # HELP hitpoints_total Damage Capacity
+	// hitpoints_total{building="Civilian Hospital",ground="Genesis Pit"} 310
+	// hitpoints_total{arsenal="Tech Center",ground="Genesis Pit",side="Nod"} 500
+	// hitpoints_total{arsenal="Cyborg",ground="Genesis Pit",side="Nod"} 414
 }
 
 // Fixed Assignment & Default Values

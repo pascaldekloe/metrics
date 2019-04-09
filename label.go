@@ -34,8 +34,8 @@ func (mapping *labelMapping) counter1(value string) *Counter {
 	return m
 }
 
-func (mapping *labelMapping) counter2(value1, value2 string) *Counter {
-	i := mapping.lockIndex2(value1, value2)
+func (mapping *labelMapping) counter12(value1, value2 string) *Counter {
+	i := mapping.lockIndex12(value1, value2)
 	if i < len(mapping.counters) {
 		mapping.Unlock()
 		return mapping.counters[i]
@@ -47,8 +47,8 @@ func (mapping *labelMapping) counter2(value1, value2 string) *Counter {
 	return m
 }
 
-func (mapping *labelMapping) counter3(value1, value2, value3 string) *Counter {
-	i := mapping.lockIndex3(value1, value2, value3)
+func (mapping *labelMapping) counter123(value1, value2, value3 string) *Counter {
+	i := mapping.lockIndex123(value1, value2, value3)
 	if i < len(mapping.counters) {
 		mapping.Unlock()
 		return mapping.counters[i]
@@ -73,8 +73,8 @@ func (mapping *labelMapping) integer1(value string) *Integer {
 	return m
 }
 
-func (mapping *labelMapping) integer2(value1, value2 string) *Integer {
-	i := mapping.lockIndex2(value1, value2)
+func (mapping *labelMapping) integer12(value1, value2 string) *Integer {
+	i := mapping.lockIndex12(value1, value2)
 	if i < len(mapping.integers) {
 		mapping.Unlock()
 		return mapping.integers[i]
@@ -86,8 +86,8 @@ func (mapping *labelMapping) integer2(value1, value2 string) *Integer {
 	return m
 }
 
-func (mapping *labelMapping) integer3(value1, value2, value3 string) *Integer {
-	i := mapping.lockIndex3(value1, value2, value3)
+func (mapping *labelMapping) integer123(value1, value2, value3 string) *Integer {
+	i := mapping.lockIndex123(value1, value2, value3)
 	if i < len(mapping.integers) {
 		mapping.Unlock()
 		return mapping.integers[i]
@@ -112,8 +112,8 @@ func (mapping *labelMapping) real1(value string) *Real {
 	return m
 }
 
-func (mapping *labelMapping) real2(value1, value2 string) *Real {
-	i := mapping.lockIndex2(value1, value2)
+func (mapping *labelMapping) real12(value1, value2 string) *Real {
+	i := mapping.lockIndex12(value1, value2)
 	if i < len(mapping.reals) {
 		mapping.Unlock()
 		return mapping.reals[i]
@@ -125,8 +125,8 @@ func (mapping *labelMapping) real2(value1, value2 string) *Real {
 	return m
 }
 
-func (mapping *labelMapping) real3(value1, value2, value3 string) *Real {
-	i := mapping.lockIndex3(value1, value2, value3)
+func (mapping *labelMapping) real123(value1, value2, value3 string) *Real {
+	i := mapping.lockIndex123(value1, value2, value3)
 	if i < len(mapping.reals) {
 		mapping.Unlock()
 		return mapping.reals[i]
@@ -151,8 +151,8 @@ func (mapping *labelMapping) sample1(value string) *Sample {
 	return m
 }
 
-func (mapping *labelMapping) sample2(value1, value2 string) *Sample {
-	i := mapping.lockIndex2(value1, value2)
+func (mapping *labelMapping) sample12(value1, value2 string) *Sample {
+	i := mapping.lockIndex12(value1, value2)
 	if i < len(mapping.samples) {
 		mapping.Unlock()
 		return mapping.samples[i]
@@ -164,8 +164,8 @@ func (mapping *labelMapping) sample2(value1, value2 string) *Sample {
 	return m
 }
 
-func (mapping *labelMapping) sample3(value1, value2, value3 string) *Sample {
-	i := mapping.lockIndex3(value1, value2, value3)
+func (mapping *labelMapping) sample123(value1, value2, value3 string) *Sample {
+	i := mapping.lockIndex123(value1, value2, value3)
 	if i < len(mapping.samples) {
 		mapping.Unlock()
 		return mapping.samples[i]
@@ -201,8 +201,8 @@ func (mapping *labelMapping) histogram1(value string) *Histogram {
 	return h
 }
 
-func (mapping *labelMapping) histogram2(value1, value2 string) *Histogram {
-	i := mapping.lockIndex2(value1, value2)
+func (mapping *labelMapping) histogram12(value1, value2 string) *Histogram {
+	i := mapping.lockIndex12(value1, value2)
 	if i < len(mapping.histograms) {
 		mapping.Unlock()
 		return mapping.histograms[i]
@@ -244,7 +244,7 @@ func (mapping *labelMapping) lockIndex1(value string) int {
 	return mapping.lockIndex(hash)
 }
 
-func (mapping *labelMapping) lockIndex2(value1, value2 string) int {
+func (mapping *labelMapping) lockIndex12(value1, value2 string) int {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -262,7 +262,7 @@ func (mapping *labelMapping) lockIndex2(value1, value2 string) int {
 	return mapping.lockIndex(hash)
 }
 
-func (mapping *labelMapping) lockIndex3(value1, value2, value3 string) int {
+func (mapping *labelMapping) lockIndex123(value1, value2, value3 string) int {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -355,3 +355,66 @@ func (mapping *labelMapping) format3LabelPrefix(labelValue1, labelValue2, labelV
 
 	return buf.String()
 }
+
+/////////////////////////
+// Label Order Remappings
+
+func (mapping *labelMapping) counter21(v2, v1 string) *Counter { return mapping.counter12(v1, v2) }
+func (mapping *labelMapping) counter132(v1, v3, v2 string) *Counter {
+	return mapping.counter123(v1, v2, v3)
+}
+func (mapping *labelMapping) counter213(v2, v1, v3 string) *Counter {
+	return mapping.counter123(v1, v2, v3)
+}
+func (mapping *labelMapping) counter231(v2, v3, v1 string) *Counter {
+	return mapping.counter123(v1, v2, v3)
+}
+func (mapping *labelMapping) counter312(v3, v1, v2 string) *Counter {
+	return mapping.counter123(v1, v2, v3)
+}
+func (mapping *labelMapping) counter321(v3, v2, v1 string) *Counter {
+	return mapping.counter123(v1, v2, v3)
+}
+
+func (mapping *labelMapping) integer21(v2, v1 string) *Integer { return mapping.integer12(v1, v2) }
+func (mapping *labelMapping) integer132(v1, v3, v2 string) *Integer {
+	return mapping.integer123(v1, v2, v3)
+}
+func (mapping *labelMapping) integer213(v2, v1, v3 string) *Integer {
+	return mapping.integer123(v1, v2, v3)
+}
+func (mapping *labelMapping) integer231(v2, v3, v1 string) *Integer {
+	return mapping.integer123(v1, v2, v3)
+}
+func (mapping *labelMapping) integer312(v3, v1, v2 string) *Integer {
+	return mapping.integer123(v1, v2, v3)
+}
+func (mapping *labelMapping) integer321(v3, v2, v1 string) *Integer {
+	return mapping.integer123(v1, v2, v3)
+}
+
+func (mapping *labelMapping) real21(v2, v1 string) *Real      { return mapping.real12(v1, v2) }
+func (mapping *labelMapping) real132(v1, v3, v2 string) *Real { return mapping.real123(v1, v2, v3) }
+func (mapping *labelMapping) real213(v2, v1, v3 string) *Real { return mapping.real123(v1, v2, v3) }
+func (mapping *labelMapping) real231(v2, v3, v1 string) *Real { return mapping.real123(v1, v2, v3) }
+func (mapping *labelMapping) real312(v3, v1, v2 string) *Real { return mapping.real123(v1, v2, v3) }
+func (mapping *labelMapping) real321(v3, v2, v1 string) *Real { return mapping.real123(v1, v2, v3) }
+
+func (mapping *labelMapping) sample21(v2, v1 string) *Sample { return mapping.sample12(v1, v2) }
+func (mapping *labelMapping) sample132(v1, v3, v2 string) *Sample {
+	return mapping.sample123(v1, v2, v3)
+}
+func (mapping *labelMapping) sample213(v2, v1, v3 string) *Sample {
+	return mapping.sample123(v1, v2, v3)
+}
+func (mapping *labelMapping) sample231(v2, v3, v1 string) *Sample {
+	return mapping.sample123(v1, v2, v3)
+}
+func (mapping *labelMapping) sample312(v3, v1, v2 string) *Sample {
+	return mapping.sample123(v1, v2, v3)
+}
+func (mapping *labelMapping) sample321(v3, v2, v1 string) *Sample {
+	return mapping.sample123(v1, v2, v3)
+}
+
+func (mapping *labelMapping) histogram21(v2, v1 string) *Histogram { return mapping.histogram12(v1, v2) }
