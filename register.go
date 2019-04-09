@@ -57,12 +57,13 @@ type Register struct {
 	metrics []*metric
 }
 
-// NewRegister returns an empty registration instance for non-standard usecases.
+// NewRegister returns an empty metric bundle. The corresponding functions
+// of each Register method operate on the (hidden) default instance.
 func NewRegister() *Register {
 	return &Register{indices: make(map[string]uint32)}
 }
 
-// MustCounter registers a new Counter. Registration panics when name
+// MustCounter registers a new Countereg. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
@@ -70,18 +71,18 @@ func MustCounter(name, help string) *Counter {
 	return std.MustCounter(name, help)
 }
 
-// MustCounter registers a new Counter. Registration panics when name
+// MustCounter registers a new Countereg. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
-func (r *Register) MustCounter(name, help string) *Counter {
+func (reg *Register) MustCounter(name, help string) *Counter {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd, counterID)
+	m := reg.mustMetric(name, counterTypeLineEnd, counterID)
 	if m.counter != nil {
 		panic("metrics: name already in use")
 	}
@@ -103,14 +104,14 @@ func MustInteger(name, help string) *Integer {
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
-func (r *Register) MustInteger(name, help string) *Integer {
+func (reg *Register) MustInteger(name, help string) *Integer {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd, integerID)
+	m := reg.mustMetric(name, gaugeTypeLineEnd, integerID)
 	if m.integer != nil {
 		panic("metrics: name already in use")
 	}
@@ -132,14 +133,14 @@ func MustReal(name, help string) *Real {
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
-func (r *Register) MustReal(name, help string) *Real {
+func (reg *Register) MustReal(name, help string) *Real {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd, realID)
+	m := reg.mustMetric(name, gaugeTypeLineEnd, realID)
 	if m.real != nil {
 		panic("metrics: name already in use")
 	}
@@ -150,7 +151,7 @@ func (r *Register) MustReal(name, help string) *Real {
 }
 
 // MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending order. Special cases not-a-number
+// boundaries, preferably in ascending ordereg. Special cases not-a-number
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
@@ -160,22 +161,22 @@ func MustHistogram(name, help string, buckets ...float64) *Histogram {
 }
 
 // MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending order. Special cases not-a-number
+// boundaries, preferably in ascending ordereg. Special cases not-a-number
 // and both infinities are ignored.
 // Registration panics when name was registered before, or when name
 // doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
 // Help is an optional comment text.
-func (r *Register) MustHistogram(name, help string, buckets ...float64) *Histogram {
+func (reg *Register) MustHistogram(name, help string, buckets ...float64) *Histogram {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
 	h := newHistogram(name, buckets)
 	h.prefix(name)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, histogramTypeLineEnd, histogramID)
+	m := reg.mustMetric(name, histogramTypeLineEnd, histogramID)
 	if m.histogram != nil {
 		panic("metrics: name already in use")
 	}
@@ -197,14 +198,14 @@ func MustRealSample(name, help string) *Sample {
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
-func (r *Register) MustRealSample(name, help string) *Sample {
+func (reg *Register) MustRealSample(name, help string) *Sample {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, gaugeTypeLineEnd, realSampleID)
+	m := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
@@ -226,14 +227,14 @@ func MustCounterSample(name, help string) *Sample {
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
 // Help is an optional comment text.
-func (r *Register) MustCounterSample(name, help string) *Sample {
+func (reg *Register) MustCounterSample(name, help string) *Sample {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
 
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 
-	m := r.mustMetric(name, counterTypeLineEnd, counterSampleID)
+	m := reg.mustMetric(name, counterTypeLineEnd, counterSampleID)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
@@ -267,12 +268,12 @@ func Must1LabelCounter(name, labelName string) func(labelValue string) *Counter 
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
+func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, labelName, "", "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, labelName, "", "")
+	reg.mutex.Unlock()
 
 	return l.counter1
 }
@@ -303,12 +304,12 @@ func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, la
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
+func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Unlock()
 
 	return l.counter2
 }
@@ -339,12 +340,12 @@ func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(lab
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
+func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, label3Name)
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, label3Name)
+	reg.mutex.Unlock()
 
 	return l.counter3
 }
@@ -373,12 +374,12 @@ func Must1LabelInteger(name, labelName string) func(labelValue string) *Integer 
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
+func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, labelName, "", "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, labelName, "", "")
+	reg.mutex.Unlock()
 
 	return l.integer1
 }
@@ -409,12 +410,12 @@ func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, la
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
+func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Unlock()
 
 	return l.integer2
 }
@@ -445,12 +446,12 @@ func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(lab
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
+func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, label3Name)
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, label3Name)
+	reg.mutex.Unlock()
 
 	return l.integer3
 }
@@ -479,12 +480,12 @@ func Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
+func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, labelName, "", "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, labelName, "", "")
+	reg.mutex.Unlock()
 
 	return l.real1
 }
@@ -515,12 +516,12 @@ func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
+func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Unlock()
 
 	return l.real2
 }
@@ -551,12 +552,12 @@ func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
+func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, label3Name)
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, label3Name)
+	reg.mutex.Unlock()
 
 	return l.real3
 }
@@ -565,7 +566,7 @@ func (r *Register) Must3LabelReal(name, label1Name, label2Name, label3Name strin
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
+// Buckets define the upper boundaries, preferably in ascending ordereg.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -581,7 +582,7 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
+// Buckets define the upper boundaries, preferably in ascending ordereg.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -589,13 +590,13 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
+func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
 	l.buckets = buckets
-	r.mutex.Unlock()
+	reg.mutex.Unlock()
 
 	return l.histogram1
 }
@@ -604,7 +605,7 @@ func (r *Register) Must1LabelHistogram(name, labelName string, buckets ...float6
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
+// Buckets define the upper boundaries, preferably in ascending ordereg.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -621,7 +622,7 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 // instances to each label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
+// Buckets define the upper boundaries, preferably in ascending ordereg.
 // Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
@@ -630,13 +631,13 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
+func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
 	l.buckets = buckets
-	r.mutex.Unlock()
+	reg.mutex.Unlock()
 
 	return l.histogram2
 }
@@ -665,12 +666,12 @@ func Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sa
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
+func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, labelName, "", "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, labelName, "", "")
+	reg.mutex.Unlock()
 
 	return l.sample1
 }
@@ -701,12 +702,12 @@ func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Val
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Unlock()
 
 	return l.sample2
 }
@@ -737,12 +738,12 @@ func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) fu
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	reg.mutex.Unlock()
 
 	return l.sample3
 }
@@ -771,12 +772,12 @@ func Must1LabelRealSample(name, labelName string) func(labelValue string) *Sampl
 // (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
-func (r *Register) Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
+func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
 	mustValidNames(name, labelName)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, labelName, "", "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, labelName, "", "")
+	reg.mutex.Unlock()
 
 	return l.sample1
 }
@@ -807,12 +808,12 @@ func Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value,
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
+func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, "")
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, "")
+	reg.mutex.Unlock()
 
 	return l.sample2
 }
@@ -843,19 +844,19 @@ func Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(
 // (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
 // (4) the label names do not appear in ascending order or
 // (5) the label names are already in use.
-func (r *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
+func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
-	r.mutex.Lock()
-	l := r.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
-	r.mutex.Unlock()
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	reg.mutex.Unlock()
 
 	return l.sample3
 }
 
-func (r *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
-	if index, ok := r.indices[name]; ok {
-		m := r.metrics[index]
+func (reg *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
+	if index, ok := reg.indices[name]; ok {
+		m := reg.metrics[index]
 		if m.typeID != typeID {
 			panic("metrics: name in use as another type")
 		}
@@ -865,8 +866,8 @@ func (r *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
 
 	m := &metric{typeComment: typePrefix + name + typeLineEnd, typeID: typeID}
 
-	r.indices[name] = uint32(len(r.metrics))
-	r.metrics = append(r.metrics, m)
+	reg.indices[name] = uint32(len(reg.metrics))
+	reg.metrics = append(reg.metrics, m)
 
 	return m
 }
@@ -923,16 +924,16 @@ func MustHelp(name, text string) {
 
 // MustHelp sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
-func (r *Register) MustHelp(name, text string) {
+func (reg *Register) MustHelp(name, text string) {
 	comment := helpComment(name, text)
 
-	r.mutex.Lock()
-	m := r.metrics[r.indices[name]]
+	reg.mutex.Lock()
+	m := reg.metrics[reg.indices[name]]
 	if m == nil {
 		panic("metrics: name not in use")
 	}
 	m.helpComment = comment
-	r.mutex.Unlock()
+	reg.mutex.Unlock()
 }
 
 var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)

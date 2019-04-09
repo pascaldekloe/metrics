@@ -113,18 +113,18 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkSet(b *testing.B) {
 	b.Run("real", func(b *testing.B) {
-		r := NewRegister().MustReal("bench_real_unit", "")
+		m := NewRegister().MustReal("bench_real_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				r.Set(42)
+				m.Set(42)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			done := make(chan struct{})
 			f := func() {
 				for i := b.N / 2; i >= 0; i-- {
-					r.Set(42)
+					m.Set(42)
 				}
 				done <- struct{}{}
 			}
@@ -136,19 +136,19 @@ func BenchmarkSet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		r := NewRegister().MustRealSample("bench_sample_unit", "")
+		m := NewRegister().MustRealSample("bench_sample_unit", "")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				r.Set(42, timestamp)
+				m.Set(42, timestamp)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			done := make(chan struct{})
 			f := func() {
 				for i := b.N / 2; i >= 0; i-- {
-					r.Set(42, timestamp)
+					m.Set(42, timestamp)
 				}
 				done <- struct{}{}
 			}
@@ -162,18 +162,18 @@ func BenchmarkSet(b *testing.B) {
 
 func BenchmarkAdd(b *testing.B) {
 	b.Run("counter", func(b *testing.B) {
-		c := NewRegister().MustCounter("bench_counter_unit", "")
+		m := NewRegister().MustCounter("bench_counter_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				c.Add(1)
+				m.Add(1)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			done := make(chan struct{})
 			f := func() {
 				for i := b.N / 2; i >= 0; i-- {
-					c.Add(1)
+					m.Add(1)
 				}
 				done <- struct{}{}
 			}
@@ -185,18 +185,18 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("integer", func(b *testing.B) {
-		g := NewRegister().MustInteger("bench_gauge_unit", "")
+		m := NewRegister().MustInteger("bench_gauge_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				g.Add(1)
+				m.Add(1)
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			done := make(chan struct{})
 			f := func() {
 				for i := b.N / 2; i >= 0; i-- {
-					g.Add(1)
+					m.Add(1)
 				}
 				done <- struct{}{}
 			}

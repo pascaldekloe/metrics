@@ -9,18 +9,18 @@ import (
 
 // SkipTimestamp controls time inclusion with sample serialisation.
 // When false, then live running values are stamped with the current
-// time and Sample provides its own.
-var SkipTimestamp bool
+// time and Samples provide their own time.
+var SkipTimestamp = false
 
 const headerLine = "# Prometheus Samples\n"
 
-// ServeHTTP provides samples all metrics.
+// ServeHTTP provides a sample of each metric.
 func ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	std.ServeHTTP(resp, req)
 }
 
-// ServeHTTP provides samples all metrics.
-func (r *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+// ServeHTTP provides a sample of each metric.
+func (reg *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet && req.Method != http.MethodHead {
 		resp.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)
 		if req.Method != http.MethodOptions {
@@ -31,18 +31,18 @@ func (r *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	resp.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
-	r.WriteText(resp)
+	reg.WriteText(resp)
 }
 
-// WriteText serialises all metrics using a simple text-based exposition format.
-// All errors returned by Writer are ignored by design.
+// WriteText serialises a sample of each metric in a simple text
+// format. All errors returned by Writer are ignored by design.
 func WriteText(w io.Writer) {
 	std.WriteText(w)
 }
 
-// WriteText serialises all metrics using a simple text-based exposition format.
-// All errors returned by Writer are ignored by design.
-func (r *Register) WriteText(w io.Writer) {
+// WriteText serialises a sample of each metric in a simple text
+// format. All errors returned by Writer are ignored by design.
+func (reg *Register) WriteText(w io.Writer) {
 	// write buffer
 	buf := make([]byte, len(headerLine), 4096)
 	copy(buf, headerLine)
@@ -50,14 +50,14 @@ func (r *Register) WriteText(w io.Writer) {
 	var buckets []uint64 // reusable
 
 	// snapshot
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	reg.mutex.RLock()
+	defer reg.mutex.RUnlock()
 
 	// reuse to minimise time lookups
 	lineEnd := sampleLineEnd(make([]byte, 21))
 
 	// serialise samples in order of appearance
-	for _, m := range r.metrics {
+	for _, m := range reg.metrics {
 		if cap(buf)-len(buf) < len(m.typeComment)+len(m.helpComment) {
 			w.Write(buf)
 			buf = buf[:0]
@@ -146,47 +146,68 @@ func (r *Register) WriteText(w io.Writer) {
 	}
 }
 
-func (c *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(c.prefix)+maxUint64Text+len(lineEnd) {
+func (m *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(m.prefix)+maxUint64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]
 		// need fresh timestamp after Write
 		lineEnd = sampleLineEnd(lineEnd)
 	}
 
-	buf = append(buf, c.prefix...)
-	buf = strconv.AppendUint(buf, c.Get(), 10)
+	buf = append(buf, m.prefix...)
+	buf = strconv.AppendUint(buf, m.Get(), 10)
 	buf = append(buf, lineEnd...)
 
 	return buf, lineEnd
 }
 
-func (g *Integer) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(g.prefix)+maxInt64Text+len(lineEnd) {
+func (m *Integer) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(m.prefix)+maxInt64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]
 		// need fresh timestamp after Write
 		lineEnd = sampleLineEnd(lineEnd)
 	}
 
-	buf = append(buf, g.prefix...)
-	buf = strconv.AppendInt(buf, g.Get(), 10)
+	buf = append(buf, m.prefix...)
+	buf = strconv.AppendInt(buf, m.Get(), 10)
 	buf = append(buf, lineEnd...)
 
 	return buf, lineEnd
 }
 
-func (g *Real) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(g.prefix)+maxFloat64Text+len(lineEnd) {
+func (m *Real) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(m.prefix)+maxFloat64Text+len(lineEnd) {
 		w.Write(buf)
 		buf = buf[:0]
 		// need fresh timestamp after Write
 		lineEnd = sampleLineEnd(lineEnd)
 	}
 
-	buf = append(buf, g.prefix...)
-	buf = strconv.AppendFloat(buf, g.Get(), 'g', -1, 64)
+	buf = append(buf, m.prefix...)
+	buf = strconv.AppendFloat(buf, m.Get(), 'g', -1, 64)
 	buf = append(buf, lineEnd...)
+
+	return buf, lineEnd
+}
+
+func (m *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
+	if cap(buf)-len(buf) < len(m.prefix)+maxFloat64Text+21 {
+		w.Write(buf)
+		buf = buf[:0]
+		// need fresh timestamp after Write
+		lineEnd = sampleLineEnd(lineEnd)
+	}
+
+	if value, timestamp := m.Get(); timestamp != 0 {
+		buf = append(buf, m.prefix...)
+		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
+		if !SkipTimestamp {
+			buf = append(buf, ' ')
+			buf = strconv.AppendUint(buf, timestamp, 10)
+		}
+		buf = append(buf, '\n')
+	}
 
 	return buf, lineEnd
 }
@@ -239,28 +260,7 @@ func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte, buckets []uint64) (
 	return buf, lineEnd, buckets
 }
 
-func (s *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(s.prefix)+maxFloat64Text+21 {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
-	if value, timestamp := s.Get(); timestamp != 0 {
-		buf = append(buf, s.prefix...)
-		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
-		if !SkipTimestamp {
-			buf = append(buf, ' ')
-			buf = strconv.AppendUint(buf, timestamp, 10)
-		}
-		buf = append(buf, '\n')
-	}
-
-	return buf, lineEnd
-}
-
-// SampleLineEnd may include a timestamp, and terminates with a double line feed.
+// SampleLineEnd may include a timestamp, and terminates with a line feed.
 func sampleLineEnd(buf []byte) []byte {
 	buf = buf[:1]
 	if SkipTimestamp {

@@ -15,223 +15,224 @@ type labelMapping struct {
 	counters   []*Counter
 	integers   []*Integer
 	reals      []*Real
-	buckets    []float64
-	histograms []*Histogram
 	samples    []*Sample
+	histograms []*Histogram
+
+	buckets []float64
 }
 
-func (m *labelMapping) counter1(value string) *Counter {
-	i := m.lockIndex1(value)
-	if i < len(m.counters) {
-		m.Unlock()
-		return m.counters[i]
+func (mapping *labelMapping) counter1(value string) *Counter {
+	i := mapping.lockIndex1(value)
+	if i < len(mapping.counters) {
+		mapping.Unlock()
+		return mapping.counters[i]
 	}
 
-	c := &Counter{prefix: m.format1LabelPrefix(value)}
-	m.counters = append(m.counters, c)
-	m.Unlock()
-	return c
+	m := &Counter{prefix: mapping.format1LabelPrefix(value)}
+	mapping.counters = append(mapping.counters, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) counter2(value1, value2 string) *Counter {
-	i := m.lockIndex2(value1, value2)
-	if i < len(m.counters) {
-		m.Unlock()
-		return m.counters[i]
+func (mapping *labelMapping) counter2(value1, value2 string) *Counter {
+	i := mapping.lockIndex2(value1, value2)
+	if i < len(mapping.counters) {
+		mapping.Unlock()
+		return mapping.counters[i]
 	}
 
-	c := &Counter{prefix: m.format2LabelPrefix(value1, value2)}
-	m.counters = append(m.counters, c)
-	m.Unlock()
-	return c
+	m := &Counter{prefix: mapping.format2LabelPrefix(value1, value2)}
+	mapping.counters = append(mapping.counters, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) counter3(value1, value2, value3 string) *Counter {
-	i := m.lockIndex3(value1, value2, value3)
-	if i < len(m.counters) {
-		m.Unlock()
-		return m.counters[i]
+func (mapping *labelMapping) counter3(value1, value2, value3 string) *Counter {
+	i := mapping.lockIndex3(value1, value2, value3)
+	if i < len(mapping.counters) {
+		mapping.Unlock()
+		return mapping.counters[i]
 	}
 
-	c := &Counter{prefix: m.format3LabelPrefix(value1, value2, value3)}
-	m.counters = append(m.counters, c)
-	m.Unlock()
-	return c
+	m := &Counter{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
+	mapping.counters = append(mapping.counters, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) integer1(value string) *Integer {
-	i := m.lockIndex1(value)
-	if i < len(m.integers) {
-		m.Unlock()
-		return m.integers[i]
+func (mapping *labelMapping) integer1(value string) *Integer {
+	i := mapping.lockIndex1(value)
+	if i < len(mapping.integers) {
+		mapping.Unlock()
+		return mapping.integers[i]
 	}
 
-	z := &Integer{prefix: m.format1LabelPrefix(value)}
-	m.integers = append(m.integers, z)
-	m.Unlock()
-	return z
+	m := &Integer{prefix: mapping.format1LabelPrefix(value)}
+	mapping.integers = append(mapping.integers, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) integer2(value1, value2 string) *Integer {
-	i := m.lockIndex2(value1, value2)
-	if i < len(m.integers) {
-		m.Unlock()
-		return m.integers[i]
+func (mapping *labelMapping) integer2(value1, value2 string) *Integer {
+	i := mapping.lockIndex2(value1, value2)
+	if i < len(mapping.integers) {
+		mapping.Unlock()
+		return mapping.integers[i]
 	}
 
-	z := &Integer{prefix: m.format2LabelPrefix(value1, value2)}
-	m.integers = append(m.integers, z)
-	m.Unlock()
-	return z
+	m := &Integer{prefix: mapping.format2LabelPrefix(value1, value2)}
+	mapping.integers = append(mapping.integers, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) integer3(value1, value2, value3 string) *Integer {
-	i := m.lockIndex3(value1, value2, value3)
-	if i < len(m.integers) {
-		m.Unlock()
-		return m.integers[i]
+func (mapping *labelMapping) integer3(value1, value2, value3 string) *Integer {
+	i := mapping.lockIndex3(value1, value2, value3)
+	if i < len(mapping.integers) {
+		mapping.Unlock()
+		return mapping.integers[i]
 	}
 
-	z := &Integer{prefix: m.format3LabelPrefix(value1, value2, value3)}
-	m.integers = append(m.integers, z)
-	m.Unlock()
-	return z
+	m := &Integer{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
+	mapping.integers = append(mapping.integers, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) real1(value string) *Real {
-	i := m.lockIndex1(value)
-	if i < len(m.reals) {
-		m.Unlock()
-		return m.reals[i]
+func (mapping *labelMapping) real1(value string) *Real {
+	i := mapping.lockIndex1(value)
+	if i < len(mapping.reals) {
+		mapping.Unlock()
+		return mapping.reals[i]
 	}
 
-	r := &Real{prefix: m.format1LabelPrefix(value)}
-	m.reals = append(m.reals, r)
-	m.Unlock()
-	return r
+	m := &Real{prefix: mapping.format1LabelPrefix(value)}
+	mapping.reals = append(mapping.reals, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) real2(value1, value2 string) *Real {
-	i := m.lockIndex2(value1, value2)
-	if i < len(m.reals) {
-		m.Unlock()
-		return m.reals[i]
+func (mapping *labelMapping) real2(value1, value2 string) *Real {
+	i := mapping.lockIndex2(value1, value2)
+	if i < len(mapping.reals) {
+		mapping.Unlock()
+		return mapping.reals[i]
 	}
 
-	r := &Real{prefix: m.format2LabelPrefix(value1, value2)}
-	m.reals = append(m.reals, r)
-	m.Unlock()
-	return r
+	m := &Real{prefix: mapping.format2LabelPrefix(value1, value2)}
+	mapping.reals = append(mapping.reals, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) real3(value1, value2, value3 string) *Real {
-	i := m.lockIndex3(value1, value2, value3)
-	if i < len(m.reals) {
-		m.Unlock()
-		return m.reals[i]
+func (mapping *labelMapping) real3(value1, value2, value3 string) *Real {
+	i := mapping.lockIndex3(value1, value2, value3)
+	if i < len(mapping.reals) {
+		mapping.Unlock()
+		return mapping.reals[i]
 	}
 
-	r := &Real{prefix: m.format3LabelPrefix(value1, value2, value3)}
-	m.reals = append(m.reals, r)
-	m.Unlock()
-	return r
+	m := &Real{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
+	mapping.reals = append(mapping.reals, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) sample1(value string) *Sample {
-	i := m.lockIndex1(value)
-	if i < len(m.samples) {
-		m.Unlock()
-		return m.samples[i]
+func (mapping *labelMapping) sample1(value string) *Sample {
+	i := mapping.lockIndex1(value)
+	if i < len(mapping.samples) {
+		mapping.Unlock()
+		return mapping.samples[i]
 	}
 
-	r := &Sample{prefix: m.format1LabelPrefix(value)}
-	m.samples = append(m.samples, r)
-	m.Unlock()
-	return r
+	m := &Sample{prefix: mapping.format1LabelPrefix(value)}
+	mapping.samples = append(mapping.samples, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) sample2(value1, value2 string) *Sample {
-	i := m.lockIndex2(value1, value2)
-	if i < len(m.samples) {
-		m.Unlock()
-		return m.samples[i]
+func (mapping *labelMapping) sample2(value1, value2 string) *Sample {
+	i := mapping.lockIndex2(value1, value2)
+	if i < len(mapping.samples) {
+		mapping.Unlock()
+		return mapping.samples[i]
 	}
 
-	r := &Sample{prefix: m.format2LabelPrefix(value1, value2)}
-	m.samples = append(m.samples, r)
-	m.Unlock()
-	return r
+	m := &Sample{prefix: mapping.format2LabelPrefix(value1, value2)}
+	mapping.samples = append(mapping.samples, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) sample3(value1, value2, value3 string) *Sample {
-	i := m.lockIndex3(value1, value2, value3)
-	if i < len(m.samples) {
-		m.Unlock()
-		return m.samples[i]
+func (mapping *labelMapping) sample3(value1, value2, value3 string) *Sample {
+	i := mapping.lockIndex3(value1, value2, value3)
+	if i < len(mapping.samples) {
+		mapping.Unlock()
+		return mapping.samples[i]
 	}
 
-	r := &Sample{prefix: m.format3LabelPrefix(value1, value2, value3)}
-	m.samples = append(m.samples, r)
-	m.Unlock()
-	return r
+	m := &Sample{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
+	mapping.samples = append(mapping.samples, m)
+	mapping.Unlock()
+	return m
 }
 
-func (m *labelMapping) histogram1(value string) *Histogram {
-	i := m.lockIndex1(value)
-	if i < len(m.histograms) {
-		m.Unlock()
-		return m.histograms[i]
+func (mapping *labelMapping) histogram1(value string) *Histogram {
+	i := mapping.lockIndex1(value)
+	if i < len(mapping.histograms) {
+		mapping.Unlock()
+		return mapping.histograms[i]
 	}
 
-	h := newHistogram(m.name, m.buckets)
+	h := newHistogram(mapping.name, mapping.buckets)
 
 	// set prefixes
-	tail := `",` + m.labelNames[0] + `="` + valueEscapes.Replace(value) + `"} `
+	tail := `",` + mapping.labelNames[0] + `="` + valueEscapes.Replace(value) + `"} `
 	for i, f := range h.BucketBounds {
-		h.bucketPrefixes[i] = m.name + `{le="` + strconv.FormatFloat(f, 'g', -1, 64) + tail
+		h.bucketPrefixes[i] = mapping.name + `{le="` + strconv.FormatFloat(f, 'g', -1, 64) + tail
 	}
-	h.bucketPrefixes[len(h.BucketBounds)] = m.name + `{le="+Inf` + tail
-	h.countPrefix = m.name + "_count{" + tail[2:]
-	h.sumPrefix = m.name + "_sum{" + tail[2:]
+	h.bucketPrefixes[len(h.BucketBounds)] = mapping.name + `{le="+Inf` + tail
+	h.countPrefix = mapping.name + "_count{" + tail[2:]
+	h.sumPrefix = mapping.name + "_sum{" + tail[2:]
 
-	m.histograms = append(m.histograms, h)
+	mapping.histograms = append(mapping.histograms, h)
 
-	m.Unlock()
+	mapping.Unlock()
 	return h
 }
 
-func (m *labelMapping) histogram2(value1, value2 string) *Histogram {
-	i := m.lockIndex2(value1, value2)
-	if i < len(m.histograms) {
-		m.Unlock()
-		return m.histograms[i]
+func (mapping *labelMapping) histogram2(value1, value2 string) *Histogram {
+	i := mapping.lockIndex2(value1, value2)
+	if i < len(mapping.histograms) {
+		mapping.Unlock()
+		return mapping.histograms[i]
 	}
 
-	h := newHistogram(m.name, m.buckets)
+	h := newHistogram(mapping.name, mapping.buckets)
 
 	// set prefixes
-	tail := `",` + m.labelNames[0] + `="` + valueEscapes.Replace(value1)
-	tail += `",` + m.labelNames[1] + `="` + valueEscapes.Replace(value2) + `"} `
+	tail := `",` + mapping.labelNames[0] + `="` + valueEscapes.Replace(value1)
+	tail += `",` + mapping.labelNames[1] + `="` + valueEscapes.Replace(value2) + `"} `
 	for i, f := range h.BucketBounds {
-		h.bucketPrefixes[i] = m.name + `{le="` + strconv.FormatFloat(f, 'g', -1, 64) + tail
+		h.bucketPrefixes[i] = mapping.name + `{le="` + strconv.FormatFloat(f, 'g', -1, 64) + tail
 	}
-	h.bucketPrefixes[len(h.BucketBounds)] = m.name + `{le="+Inf` + tail
-	h.countPrefix = m.name + "_count{" + tail[2:]
-	h.sumPrefix = m.name + "_sum{" + tail[2:]
+	h.bucketPrefixes[len(h.BucketBounds)] = mapping.name + `{le="+Inf` + tail
+	h.countPrefix = mapping.name + "_count{" + tail[2:]
+	h.sumPrefix = mapping.name + "_sum{" + tail[2:]
 
-	m.histograms = append(m.histograms, h)
+	mapping.histograms = append(mapping.histograms, h)
 
-	m.Unlock()
+	mapping.Unlock()
 	return h
 }
 
-// FNV-1a
+// 64-Bit FNV
 const (
 	hashOffset = 14695981039346656037
 	hashPrime  = 1099511628211
 )
 
-func (m *labelMapping) lockIndex1(value string) int {
+func (mapping *labelMapping) lockIndex1(value string) int {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value))
 	hash *= hashPrime
@@ -240,10 +241,10 @@ func (m *labelMapping) lockIndex1(value string) int {
 		hash *= hashPrime
 	}
 
-	return m.lockIndex(hash)
+	return mapping.lockIndex(hash)
 }
 
-func (m *labelMapping) lockIndex2(value1, value2 string) int {
+func (mapping *labelMapping) lockIndex2(value1, value2 string) int {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -258,10 +259,10 @@ func (m *labelMapping) lockIndex2(value1, value2 string) int {
 		hash *= hashPrime
 	}
 
-	return m.lockIndex(hash)
+	return mapping.lockIndex(hash)
 }
 
-func (m *labelMapping) lockIndex3(value1, value2, value3 string) int {
+func (mapping *labelMapping) lockIndex3(value1, value2, value3 string) int {
 	hash := uint64(hashOffset)
 	hash ^= uint64(len(value1))
 	hash *= hashPrime
@@ -282,32 +283,32 @@ func (m *labelMapping) lockIndex3(value1, value2, value3 string) int {
 		hash *= hashPrime
 	}
 
-	return m.lockIndex(hash)
+	return mapping.lockIndex(hash)
 }
 
-func (m *labelMapping) lockIndex(hash uint64) int {
-	m.Lock()
+func (mapping *labelMapping) lockIndex(hash uint64) int {
+	mapping.Lock()
 
-	for i, h := range m.labelHashes {
+	for i, h := range mapping.labelHashes {
 		if h == hash {
 			return i
 		}
 	}
 
-	i := len(m.labelHashes)
-	m.labelHashes = append(m.labelHashes, hash)
+	i := len(mapping.labelHashes)
+	mapping.labelHashes = append(mapping.labelHashes, hash)
 	return i
 }
 
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
-func (m *labelMapping) format1LabelPrefix(labelValue string) string {
+func (mapping *labelMapping) format1LabelPrefix(labelValue string) string {
 	var buf strings.Builder
-	buf.Grow(6 + len(m.name) + len(m.labelNames[0]) + len(labelValue))
+	buf.Grow(6 + len(mapping.name) + len(mapping.labelNames[0]) + len(labelValue))
 
-	buf.WriteString(m.name)
+	buf.WriteString(mapping.name)
 	buf.WriteByte('{')
-	buf.WriteString(m.labelNames[0])
+	buf.WriteString(mapping.labelNames[0])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue)
 	buf.WriteString(`"} `)
@@ -315,17 +316,17 @@ func (m *labelMapping) format1LabelPrefix(labelValue string) string {
 	return buf.String()
 }
 
-func (m *labelMapping) format2LabelPrefix(labelValue1, labelValue2 string) string {
+func (mapping *labelMapping) format2LabelPrefix(labelValue1, labelValue2 string) string {
 	var buf strings.Builder
-	buf.Grow(10 + len(m.name) + len(m.labelNames[0]) + len(m.labelNames[1]) + len(labelValue1) + len(labelValue2))
+	buf.Grow(10 + len(mapping.name) + len(mapping.labelNames[0]) + len(mapping.labelNames[1]) + len(labelValue1) + len(labelValue2))
 
-	buf.WriteString(m.name)
+	buf.WriteString(mapping.name)
 	buf.WriteByte('{')
-	buf.WriteString(m.labelNames[0])
+	buf.WriteString(mapping.labelNames[0])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(m.labelNames[1])
+	buf.WriteString(mapping.labelNames[1])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`"} `)
@@ -333,21 +334,21 @@ func (m *labelMapping) format2LabelPrefix(labelValue1, labelValue2 string) strin
 	return buf.String()
 }
 
-func (m *labelMapping) format3LabelPrefix(labelValue1, labelValue2, labelValue3 string) string {
+func (mapping *labelMapping) format3LabelPrefix(labelValue1, labelValue2, labelValue3 string) string {
 	var buf strings.Builder
-	buf.Grow(14 + len(m.name) + len(m.labelNames[0]) + len(m.labelNames[1]) + len(m.labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
+	buf.Grow(14 + len(mapping.name) + len(mapping.labelNames[0]) + len(mapping.labelNames[1]) + len(mapping.labelNames[2]) + len(labelValue1) + len(labelValue2) + len(labelValue3))
 
-	buf.WriteString(m.name)
+	buf.WriteString(mapping.name)
 	buf.WriteByte('{')
-	buf.WriteString(m.labelNames[0])
+	buf.WriteString(mapping.labelNames[0])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue1)
 	buf.WriteString(`",`)
-	buf.WriteString(m.labelNames[1])
+	buf.WriteString(mapping.labelNames[1])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue2)
 	buf.WriteString(`",`)
-	buf.WriteString(m.labelNames[2])
+	buf.WriteString(mapping.labelNames[2])
 	buf.WriteString(`="`)
 	valueEscapes.WriteString(&buf, labelValue3)
 	buf.WriteString(`"} `)

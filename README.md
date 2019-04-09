@@ -1,6 +1,8 @@
 [![API Documentation](https://godoc.org/github.com/pascaldekloe/metrics?status.svg)](https://godoc.org/github.com/pascaldekloe/metrics)
 
-A Prometheus exposition library for the Go programming language.
+# Metrics
+
+Atomic measures with Prometheus exposition for the Go programming language.
 
 ```go
 var ConnCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
@@ -11,7 +13,7 @@ func main() {
 	// mount exposition point
 	http.HandleFunc("/metrics", metrics.ServeHTTP)
 
-	// …
+	// good to go…
 }
 ```
 

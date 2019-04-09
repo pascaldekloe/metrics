@@ -14,11 +14,11 @@ func TestServeHTTP(t *testing.T) {
 	SkipTimestamp = true
 	reg := NewRegister()
 
-	g1 := reg.MustReal("g1", "🆘")
-	g1.Set(42)
-	c1 := reg.MustCounter("c1", "escape\n… and \\")
-	c1.Add(1)
-	c1.Add(8)
+	m1 := reg.MustReal("m1", "🆘")
+	m1.Set(42)
+	m2 := reg.MustCounter("m2", "escape\n… and \\")
+	m2.Add(1)
+	m2.Add(8)
 
 	rec := httptest.NewRecorder()
 	reg.ServeHTTP(rec, httptest.NewRequest("GET", "/metrics", nil))
@@ -36,13 +36,13 @@ func TestServeHTTP(t *testing.T) {
 
 	const want = `# Prometheus Samples
 
-# TYPE g1 gauge
-# HELP g1 🆘
-g1 42
+# TYPE m1 gauge
+# HELP m1 🆘
+m1 42
 
-# TYPE c1 counter
-# HELP c1 escape\n… and \\
-c1 9
+# TYPE m2 counter
+# HELP m2 escape\n… and \\
+m2 9
 `
 	if got := rec.Body.String(); got != want {
 		t.Errorf("got %q", got)

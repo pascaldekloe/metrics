@@ -1,11 +1,12 @@
 // Package metrics provides atomic measures and Prometheus exposition.
+//
+// Counter, Integer, Real and Histogram are live representations of events.
+// Value updates should be part of the respective implementation. Otherwise,
+// use Sample for captures with a timestamp specification.
+//
 // The Must functions deal with registration. Their use is intended for setup
 // during application launch only.
-// All metrics are permanent-the API offers no deletion.
-//
-// Gauges [Integer or Real], Counter and Histogram are live representations.
-// Value updates should be part of the respective components that alter state.
-// In all other cases, use Sample to capture with timestamps.
+// All metrics are permanent-the API offers no deletion by design.
 package metrics
 
 import (
@@ -76,67 +77,67 @@ type Real struct {
 // with a zero timestamp.
 // Multiple goroutines may invoke methods on a Sample simultaneously.
 type Sample struct {
-	// value holds the last measurement
+	// value holds the current capture
 	value atomic.Value
 	// sample line start as in <name> <label-map>? ' '
 	prefix string
 }
 
-// Measurement is a Sample capture.
-type measurement struct {
+// Capture is a Sample value.
+type capture struct {
 	value     float64
 	timestamp uint64
 }
 
 // Get returns the current value.
-func (c *Counter) Get() uint64 {
-	return atomic.LoadUint64(&c.value)
+func (m *Counter) Get() uint64 {
+	return atomic.LoadUint64(&m.value)
 }
 
 // Get returns the current value.
-func (z *Integer) Get() int64 {
-	return atomic.LoadInt64(&z.value)
+func (m *Integer) Get() int64 {
+	return atomic.LoadInt64(&m.value)
 }
 
 // Get returns the current value.
-func (r *Real) Get() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&r.valueBits))
+func (m *Real) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&m.valueBits))
 }
 
-// Get returns the last capture with its Unix time in milliseconds.
-func (s *Sample) Get() (value float64, timestamp uint64) {
-	v := s.value.Load()
+// Get returns the current value with its Unix time in milliseconds.
+func (m *Sample) Get() (value float64, timestamp uint64) {
+	v := m.value.Load()
 	if v == nil {
 		return
 	}
-	m := v.(measurement)
-	return m.value, m.timestamp
+	c := v.(capture)
+	return c.value, c.timestamp
 }
 
 // Set replaces the current value.
-func (z *Integer) Set(update int64) {
-	atomic.StoreInt64(&z.value, update)
+func (m *Integer) Set(update int64) {
+	atomic.StoreInt64(&m.value, update)
 }
 
 // Set replaces the current value.
-func (r *Real) Set(update float64) {
-	atomic.StoreUint64(&r.valueBits, math.Float64bits(update))
+func (m *Real) Set(update float64) {
+	atomic.StoreUint64(&m.valueBits, math.Float64bits(update))
 }
 
 // Set replaces the current value.
-func (s *Sample) Set(value float64, timestamp time.Time) {
-	s.value.Store(measurement{value, uint64(timestamp.UnixNano()) / 1e6})
+func (m *Sample) Set(value float64, timestamp time.Time) {
+	m.value.Store(capture{value, uint64(timestamp.UnixNano()) / 1e6})
 }
 
-// Add increments the current value with diff.
-func (c *Counter) Add(diff uint64) {
-	atomic.AddUint64(&c.value, diff)
+// Add increments the current value with n.
+func (m *Counter) Add(n uint64) {
+	atomic.AddUint64(&m.value, n)
 }
 
-// Add sums the current value with diff.
-// Note that diff can be negative (for subtraction).
-func (z *Integer) Add(diff int64) {
-	atomic.AddInt64(&z.value, diff)
+// Add summs the current value with n.
+// Note that n can be negative (for subtraction).
+func (m *Integer) Add(n int64) {
+	atomic.AddInt64(&m.value, n)
 }
 
 // Histogram samples observations and counts them in configurable buckets.
