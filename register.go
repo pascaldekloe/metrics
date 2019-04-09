@@ -244,28 +244,28 @@ func (reg *Register) MustCounterSample(name, help string) *Sample {
 	return m.sample
 }
 
-// Must1LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
 	return std.Must1LabelCounter(name, labelName)
 }
 
-// Must1LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue string) *Counter {
@@ -278,30 +278,30 @@ func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue s
 	return l.counter1
 }
 
-// Must2LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	return std.Must2LabelCounter(name, label1Name, label2Name)
 }
 
-// Must2LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func(label1Value, label2Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name)
 
@@ -321,30 +321,30 @@ func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func
 	return l.counter12
 }
 
-// Must3LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	return std.Must3LabelCounter(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelCounter returns a function which assigns dedicated Counter
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelCounter returns a function which registers a dedicated Counter
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Counter represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Counter {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
@@ -372,28 +372,28 @@ func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name 
 	}
 }
 
-// Must1LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
 	return std.Must1LabelInteger(name, labelName)
 }
 
-// Must1LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue string) *Integer {
@@ -406,30 +406,30 @@ func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue s
 	return l.integer1
 }
 
-// Must2LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	return std.Must2LabelInteger(name, label1Name, label2Name)
 }
 
-// Must2LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func(label1Value, label2Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name)
 
@@ -449,30 +449,30 @@ func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func
 	return l.integer12
 }
 
-// Must3LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	return std.Must3LabelInteger(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelInteger returns a function which assigns dedicated Integer
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelInteger returns a function which registers a dedicated Integer
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Integer represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Integer {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
@@ -500,28 +500,28 @@ func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name 
 	}
 }
 
-// Must1LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func Must1LabelReal(name, labelName string) func(labelValue string) *Real {
 	return std.Must1LabelReal(name, labelName)
 }
 
-// Must1LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue string) *Real {
@@ -534,30 +534,30 @@ func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue stri
 	return l.real1
 }
 
-// Must2LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	return std.Must2LabelReal(name, label1Name, label2Name)
 }
 
-// Must2LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(label1Value, label2Value string) *Real {
 	mustValidNames(name, label1Name, label2Name)
 
@@ -577,30 +577,30 @@ func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(la
 	return l.real12
 }
 
-// Must3LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	return std.Must3LabelReal(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelReal returns a function which assigns dedicated Real
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelReal returns a function which registers a dedicated Real
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Real represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Real {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
@@ -628,115 +628,28 @@ func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name str
 	}
 }
 
-// Must1LabelHistogram returns a function which assigns dedicated Histogram
-// instances to each label combination. Multiple goroutines may invoke the
-// returned simultaneously. Remember that each Histogram represents a new time
-// series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
-//
-// Must panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) labelName is already in use.
-func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
-	return std.Must1LabelHistogram(name, labelName, buckets...)
-}
-
-// Must1LabelHistogram returns a function which assigns dedicated Histogram
-// instances to each label combination. Multiple goroutines may invoke the
-// returned simultaneously. Remember that each Histogram represents a new time
-// series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
-//
-// Must panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
-// (4) labelName is already in use.
-func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
-	mustValidNames(name, labelName)
-
-	reg.mutex.Lock()
-	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
-	l.buckets = buckets
-	reg.mutex.Unlock()
-
-	return l.histogram1
-}
-
-// Must2LabelHistogram returns a function which assigns dedicated Histogram
-// instances to each label combination. Multiple goroutines may invoke the
-// returned simultaneously. Remember that each Histogram represents a new time
-// series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
-//
-// Must panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
-func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
-	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
-}
-
-// Must2LabelHistogram returns a function which assigns dedicated Histogram
-// instances to each label combination. Multiple goroutines may invoke the
-// returned simultaneously. Remember that each Histogram represents a new time
-// series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
-//
-// Must panics on any of the following:
-// (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
-func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
-	mustValidNames(name, label1Name, label2Name)
-
-	var flip bool
-	if label1Name > label2Name {
-		label1Name, label2Name = label2Name, label1Name
-		flip = true
-	}
-
-	reg.mutex.Lock()
-	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
-	l.buckets = buckets
-	reg.mutex.Unlock()
-
-	if flip {
-		return l.histogram21
-	}
-	return l.histogram12
-}
-
-// Must1LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
 	return std.Must1LabelCounterSample(name, labelName)
 }
 
-// Must1LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelValue string) *Sample {
@@ -749,30 +662,30 @@ func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelV
 	return l.sample1
 }
 
-// Must2LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	return std.Must2LabelCounterSample(name, label1Name, label2Name)
 }
 
-// Must2LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
@@ -792,30 +705,30 @@ func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string
 	return l.sample12
 }
 
-// Must3LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	return std.Must3LabelCounterSample(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelCounterSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelCounterSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
@@ -843,28 +756,28 @@ func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label
 	}
 }
 
-// Must1LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
 	return std.Must1LabelRealSample(name, labelName)
 }
 
-// Must1LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must1LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
 func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValue string) *Sample {
@@ -877,30 +790,30 @@ func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValu
 	return l.sample1
 }
 
-// Must2LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	return std.Must2LabelRealSample(name, label1Name, label2Name)
 }
 
-// Must2LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must2LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) func(label1Value, label2Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name)
 
@@ -920,30 +833,30 @@ func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) f
 	return l.sample12
 }
 
-// Must3LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	return std.Must3LabelRealSample(name, label1Name, label2Name, label3Name)
 }
 
-// Must3LabelRealSample returns a function which assigns dedicated Sample
-// instances to each label combination. Multiple goroutines may invoke the
+// Must3LabelRealSample returns a function which registers a dedicated Sample
+// for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Sample represents a new time
 // series, which can dramatically increase the amount of data stored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
-// (2) name does not match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
-// (3) the label names do not match regular expression [a-zA-Z_][a-zA-Z0-9_]*,
-// (4) the label names are already in use.
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
 func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Name string) func(label1Value, label2Value, label3Value string) *Sample {
 	mustValidNames(name, label1Name, label2Name, label3Name)
 
@@ -969,6 +882,93 @@ func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Na
 	default:
 		panic(order)
 	}
+}
+
+// Must1LabelHistogram returns a function which registers a dedicated Histogram
+// for each unique label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
+	return std.Must1LabelHistogram(name, labelName, buckets...)
+}
+
+// Must1LabelHistogram returns a function which registers a dedicated Histogram
+// for each unique label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) labelName is already in use.
+func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
+	mustValidNames(name, labelName)
+
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
+	l.buckets = buckets
+	reg.mutex.Unlock()
+
+	return l.histogram1
+}
+
+// Must2LabelHistogram returns a function which registers a dedicated Histogram
+// for each unique label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
+func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
+	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
+}
+
+// Must2LabelHistogram returns a function which registers a dedicated Histogram
+// for each unique label combination. Multiple goroutines may invoke the
+// returned simultaneously. Remember that each Histogram represents a new time
+// series, which can dramatically increase the amount of data stored.
+// Buckets define the upper boundaries, preferably in ascending order.
+// Special cases not-a-number and both infinities are ignored.
+//
+// Must panics on any of the following:
+// (1) name in use as another metric type,
+// (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
+// (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
+// (4) label names are already in use.
+func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
+	mustValidNames(name, label1Name, label2Name)
+
+	var flip bool
+	if label1Name > label2Name {
+		label1Name, label2Name = label2Name, label1Name
+		flip = true
+	}
+
+	reg.mutex.Lock()
+	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
+	l.buckets = buckets
+	reg.mutex.Unlock()
+
+	if flip {
+		return l.histogram21
+	}
+	return l.histogram12
 }
 
 func (reg *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
