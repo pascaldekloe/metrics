@@ -1024,7 +1024,7 @@ func mustValidLabelName(s string) {
 			continue
 		}
 		if i == 0 || c < '0' || c > '9' {
-			panic("metrics: label name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_]*")
+			panic("metrics: label name doesn't match regular expression [a-zA-Z_][a-zA-Z0-9_]*")
 		}
 	}
 }
