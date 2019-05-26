@@ -5,8 +5,23 @@
 
 Atomic measures with Prometheus exposition for the Go programming language.
 
+The static registration functions require no further configuration.
+
 ```go
-var ConnCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
+// Package Metrics
+var (
+	ConnectCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
+	CacheSize    = metrics.MustInteger("db_cache_bytes", "Size of collective responses.")
+	DeviceUsage  = metrics.Must1LabelRealSample("db_disk_usage_ratio", "device")
+)
+```
+
+Updates are error free by design, e.g. `CacheSize.Add(-72)` or
+`DeviceUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
+
+```go
+import "github.com/pascaldekloe/metrics"
+import "github.com/pascaldekloe/metrics/gostat"
 
 func main() {
 	// include default metrics
@@ -22,9 +37,9 @@ This is free and unencumbered software released into the
 [public domain](https://creativecommons.org/publicdomain/zero/1.0).
 
 
-### Performance
+## Performance
 
-The following results were measured on a 3.5 GHz Xeon E5-1650 v2 (Ivy Bridge-EP).
+The following benchmarks were measured on a 3.5 GHz Xeon from the year 2013.
 
 ```
 name                           time/op
