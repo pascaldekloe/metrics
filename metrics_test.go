@@ -208,22 +208,18 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("histogram5", func(b *testing.B) {
-		h := NewRegister().MustHistogram("bench_histogram_unit", "", .01, .02, .05, .1)
+		h := NewRegister().MustHistogram("bench_histogram_unit", "", 1, 2, 5, 6)
 
 		b.Run("sequential", func(b *testing.B) {
-			f := .001
 			for i := 0; i < b.N; i++ {
-				h.Add(f)
-				f += .001
+				h.Add(float64(i & 7))
 			}
 		})
 		b.Run("2routines", func(b *testing.B) {
 			done := make(chan struct{})
 			f := func() {
-				f := .001
 				for i := b.N / 2; i >= 0; i-- {
-					h.Add(f)
-					f += .001
+					h.Add(float64(i & 7))
 				}
 				done <- struct{}{}
 			}
