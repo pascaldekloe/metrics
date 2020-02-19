@@ -417,4 +417,6 @@ func (mapping *labelMapping) sample321(v3, v2, v1 string) *Sample {
 	return mapping.sample123(v1, v2, v3)
 }
 
-func (mapping *labelMapping) histogram21(v2, v1 string) *Histogram { return mapping.histogram12(v1, v2) }
+func (mapping *labelMapping) histogram21(v2, v1 string) *Histogram {
+	return mapping.histogram12(v1, v2)
+}
