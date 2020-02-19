@@ -1,9 +1,12 @@
 [![API Documentation](https://godoc.org/github.com/pascaldekloe/metrics?status.svg)](https://godoc.org/github.com/pascaldekloe/metrics)
 [![Build Status](https://travis-ci.org/pascaldekloe/metrics.svg?branch=master)](https://travis-ci.org/pascaldekloe/metrics)
 
-# Metrics
+# Metrics ⚡️
 
 Atomic measures with Prometheus exposition for the Go programming language.
+
+This implementation is faster and more straightforward, when compared to the
+[standard library](https://github.com/prometheus/client_golang).
 
 The static registration functions require no further configuration.
 
@@ -11,13 +14,13 @@ The static registration functions require no further configuration.
 // Package Metrics
 var (
 	ConnectCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
-	CacheSize    = metrics.MustInteger("db_cache_bytes", "Size of collective responses.")
-	DeviceUsage  = metrics.Must1LabelRealSample("db_disk_usage_ratio", "device")
+	CacheBytes   = metrics.MustInteger("db_cache_bytes", "Size of collective responses.")
+	DiskUsage    = metrics.Must1LabelRealSample("db_disk_usage_ratio", "device")
 )
 ```
 
-Updates are error free by design, e.g. `CacheSize.Add(-72)` or
-`DeviceUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
+Updates are error free by design, e.g., `CacheBytes.Add(-72)` or
+`DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
 
 ```go
 import "github.com/pascaldekloe/metrics"
