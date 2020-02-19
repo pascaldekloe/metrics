@@ -89,6 +89,27 @@ type capture struct {
 	timestamp uint64
 }
 
+func nameFromPrefix(prefix string) string {
+	for i, r := range prefix {
+		if r == ' ' || r == '{' {
+			return prefix[:i]
+		}
+	}
+	return prefix
+}
+
+// Name returns the metrics identifier.
+func (m *Counter) Name() string { return nameFromPrefix(m.prefix) }
+
+// Name returns the metrics identifier.
+func (m *Integer) Name() string { return nameFromPrefix(m.prefix) }
+
+// Name returns the metrics identifier.
+func (m *Real) Name() string { return nameFromPrefix(m.prefix) }
+
+// Name returns the metrics identifier.
+func (m *Sample) Name() string { return nameFromPrefix(m.prefix) }
+
 // Get returns the current value.
 func (m *Counter) Get() uint64 {
 	return atomic.LoadUint64(&m.value)
@@ -270,6 +291,9 @@ func (h *Histogram) prefix(name string) {
 	h.countPrefix = name + "_count "
 	h.sumPrefix = name + "_sum "
 }
+
+// Name returns the metrics identifier.
+func (h *Histogram) Name() string { return h.name }
 
 // Get appends the observation counts for each Histogram.BucketBounds to a and
 // returns the resulting slice (as buckets). The count return has the total

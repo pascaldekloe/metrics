@@ -11,6 +11,38 @@ import (
 	"time"
 )
 
+func TestName(t *testing.T) {
+	reg := NewRegister()
+
+	if got := reg.MustCounter("c", "").Name(); got != "c" {
+		t.Errorf(`counter got %q, want "c"`, got)
+	}
+	if got := reg.Must1LabelCounter("lc", "l")("v").Name(); got != "lc" {
+		t.Errorf(`labeled counter got %q, want "lc"`, got)
+	}
+
+	if got := reg.MustInteger("i", "").Name(); got != "i" {
+		t.Errorf(`integer got %q, want "i"`, got)
+	}
+	if got := reg.Must2LabelInteger("li", "l1", "l2")("v1", "v2").Name(); got != "li" {
+		t.Errorf(`labeled integer got %q, want "li"`, got)
+	}
+
+	if got := reg.MustReal("r", "").Name(); got != "r" {
+		t.Errorf(`real got %q, want "r"`, got)
+	}
+	if got := reg.Must3LabelReal("lr", "l1", "l2", "l3")("v1", "v2", "v3").Name(); got != "lr" {
+		t.Errorf(`labeled real got %q, want "lr"`, got)
+	}
+
+	if got := reg.MustCounterSample("cs", "").Name(); got != "cs" {
+		t.Errorf(`counter sample got %q, want "cs"`, got)
+	}
+	if got := reg.Must1LabelRealSample("lrs", "l")("v").Name(); got != "lrs" {
+		t.Errorf(`labeled real sample got %q, want "lrs"`, got)
+	}
+}
+
 func TestHelp(t *testing.T) {
 	reg := NewRegister()
 
