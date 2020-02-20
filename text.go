@@ -14,12 +14,12 @@ var SkipTimestamp = false
 
 const headerLine = "# Prometheus Samples\n"
 
-// ServeHTTP provides a sample of each metric.
+// ServeHTTP provides a sample of each metric as an http.HandlerFunc.
 func ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	std.ServeHTTP(resp, req)
 }
 
-// ServeHTTP provides a sample of each metric.
+// ServeHTTP provides a sample of each metric as an http.Handler.
 func (reg *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet && req.Method != http.MethodHead {
 		resp.Header().Set("Allow", http.MethodOptions+", "+http.MethodGet+", "+http.MethodHead)

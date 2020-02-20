@@ -2,7 +2,7 @@
 //
 // Counter, Integer, Real and Histogram are live representations of events.
 // Value updates should be part of the respective implementation. Otherwise,
-// use Sample for captures with a timestamp specification.
+// use Sample for captures with a timestamp.
 //
 // The Must functions deal with registration. Their use is intended for setup
 // during application launch only.

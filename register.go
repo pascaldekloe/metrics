@@ -63,18 +63,16 @@ func NewRegister() *Register {
 	return &Register{indices: make(map[string]uint32)}
 }
 
-// MustCounter registers a new Countereg. Registration panics when name
+// MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func MustCounter(name, help string) *Counter {
 	return std.MustCounter(name, help)
 }
 
-// MustCounter registers a new Countereg. Registration panics when name
+// MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustCounter(name, help string) *Counter {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -94,16 +92,14 @@ func (reg *Register) MustCounter(name, help string) *Counter {
 
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func MustInteger(name, help string) *Integer {
 	return std.MustInteger(name, help)
 }
 
 // MustInteger registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustInteger(name, help string) *Integer {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -123,16 +119,14 @@ func (reg *Register) MustInteger(name, help string) *Integer {
 
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func MustReal(name, help string) *Real {
 	return std.MustReal(name, help)
 }
 
 // MustReal registers a new gauge. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustReal(name, help string) *Real {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -150,22 +144,22 @@ func (reg *Register) MustReal(name, help string) *Real {
 	return m.real
 }
 
-// MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending order. Special cases not-a-number
-// and both infinities are ignored.
-// Registration panics when name was registered before, or when name
-// doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-// Help is an optional comment text.
+// MustHistogram registers a new Histogram. Registration panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func MustHistogram(name, help string, buckets ...float64) *Histogram {
 	return std.MustHistogram(name, help, buckets...)
 }
 
-// MustHistogram registers a new Histogram. Buckets define the upper
-// boundaries, preferably in ascending order. Special cases not-a-number
-// and both infinities are ignored.
-// Registration panics when name was registered before, or when name
-// doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*.
-// Help is an optional comment text.
+// MustHistogram registers a new Histogram. Registration panics when name
+// was registered before, or when name doesn't match regular expression
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func (reg *Register) MustHistogram(name, help string, buckets ...float64) *Histogram {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -188,16 +182,14 @@ func (reg *Register) MustHistogram(name, help string, buckets ...float64) *Histo
 
 // MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func MustRealSample(name, help string) *Sample {
 	return std.MustRealSample(name, help)
 }
 
 // MustRealSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustRealSample(name, help string) *Sample {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -217,16 +209,14 @@ func (reg *Register) MustRealSample(name, help string) *Sample {
 
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func MustCounterSample(name, help string) *Sample {
 	return std.MustCounterSample(name, help)
 }
 
 // MustCounterSample registers a new Sample. Registration panics when name
 // was registered before, or when name doesn't match regular expression
-// [a-zA-Z_:][a-zA-Z0-9_:]*. Label combinations are allowed though.
-// Help is an optional comment text.
+// [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustCounterSample(name, help string) *Sample {
 	mustValidMetricName(name)
 	comment := helpComment(name, help)
@@ -888,14 +878,15 @@ func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Na
 // for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
 	return std.Must1LabelHistogram(name, labelName, buckets...)
 }
@@ -904,14 +895,15 @@ func Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelV
 // for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) labelName does not match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) labelName is already in use.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...float64) func(labelValue string) *Histogram {
 	mustValidNames(name, labelName)
 
@@ -927,14 +919,15 @@ func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...floa
 // for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) label names are already in use.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	return std.Must2LabelHistogram(name, label1Name, label2Name, buckets...)
 }
@@ -943,14 +936,15 @@ func Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64
 // for each unique label combination. Multiple goroutines may invoke the
 // returned simultaneously. Remember that each Histogram represents a new time
 // series, which can dramatically increase the amount of data stored.
-// Buckets define the upper boundaries, preferably in ascending order.
-// Special cases not-a-number and both infinities are ignored.
 //
 // Must panics on any of the following:
 // (1) name in use as another metric type,
 // (2) name doesn't match regular expression [a-zA-Z_:][a-zA-Z0-9_:]*,
 // (3) label names don't match regular expression [a-zA-Z_][a-zA-Z0-9_]* or
 // (4) label names are already in use.
+//
+// Buckets are defined as upper boundary values, with positive infinity
+// implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, buckets ...float64) func(label1Value, label2Value string) *Histogram {
 	mustValidNames(name, label1Name, label2Name)
 
