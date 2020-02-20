@@ -7,28 +7,33 @@ import (
 	"github.com/pascaldekloe/metrics"
 )
 
-// Basic Types & Exposition Order
+// Metric Types
 func Example() {
-	// setup
-	Uptime := metrics.MustCounterSample("db_uptime_seconds", "")
-	Disk := metrics.MustRealSample("disk_usage_ratio", "Sectors of the total capacity.")
-	Size := metrics.MustCounter("db_response_bytes_total", "Raw size of the lookup.")
-	Cache := metrics.MustInteger("db_cache_queries", "Number of query answers in cache.")
-	Backup := metrics.MustReal("db_backup_seconds", "Duration of the last backup.")
-	Delay := metrics.MustHistogram("db_delay_seconds", "Duration until response available.", 1e-6, 2e-6, 5e-6)
+	// totals with natural numbers
+	RespBytes := metrics.MustCounter("db_response_bytes_total", "Raw size of the lookup.")
+	// gauge with integer numbers
+	CacheCount := metrics.MustInteger("db_cache_queries", "Number of query answers in cache.")
+	// double precision floating points
+	BackupPriority := metrics.MustReal("db_backup_priority", "Sentiment for data redundancy.")
+	// count in steps of ≤ 1 µs, ≤ 2 µs, ≤ 5 µs and > 5 µs
+	DelaySeconds := metrics.MustHistogram("db_delay_seconds", "Duration until response available.", 1e-6, 2e-6, 5e-6)
+	// samples for periodic updates
+	UptimeSeconds := metrics.MustCounterSample("db_uptime_seconds", "Duration since launch.")
+	DiskUsage := metrics.MustRealSample("db_disk_usage_ratio", "Sectors of the total capacity.")
 
 	// measures
-	Uptime.Set(0, time.Now()) // set on ready
-	Cache.Set(1000)           // warm start
-	Delay.Add(0.00000391)
-	Delay.Add(0.00000024054)
-	Delay.Add(0.000002198)
-	Delay.Add(0.000573708)
-	Cache.Add(1)              // new entry
-	Size.Add(812)             // written amount
-	Cache.Add(-900)           // expiry sweep
-	Disk.Set(.47, time.Now()) // periodic OS call
-	Backup.Set(4.665)
+	BackupPriority.Set(7.3)
+	CacheCount.Set(1000)
+	UptimeSeconds.Set(0, time.Now())
+	DelaySeconds.Add(0.00000391)
+	DelaySeconds.Add(0.00000024054)
+	DelaySeconds.Add(0.000002198)
+	DelaySeconds.Add(0.000573708)
+	CacheCount.Add(1)
+	RespBytes.Add(812)
+	DiskUsage.Set(.47, time.Now())
+	CacheCount.Add(-997)
+	UptimeSeconds.Set(5, time.Now())
 
 	// print
 	metrics.SkipTimestamp = true
@@ -36,24 +41,17 @@ func Example() {
 	// Output:
 	// # Prometheus Samples
 	//
-	// # TYPE db_uptime_seconds counter
-	// db_uptime_seconds 0
-	//
-	// # TYPE disk_usage_ratio gauge
-	// # HELP disk_usage_ratio Sectors of the total capacity.
-	// disk_usage_ratio 0.47
-	//
 	// # TYPE db_response_bytes_total counter
 	// # HELP db_response_bytes_total Raw size of the lookup.
 	// db_response_bytes_total 812
 	//
 	// # TYPE db_cache_queries gauge
 	// # HELP db_cache_queries Number of query answers in cache.
-	// db_cache_queries 101
+	// db_cache_queries 4
 	//
-	// # TYPE db_backup_seconds gauge
-	// # HELP db_backup_seconds Duration of the last backup.
-	// db_backup_seconds 4.665
+	// # TYPE db_backup_priority gauge
+	// # HELP db_backup_priority Sentiment for data redundancy.
+	// db_backup_priority 7.3
 	//
 	// # TYPE db_delay_seconds histogram
 	// # HELP db_delay_seconds Duration until response available.
@@ -63,6 +61,14 @@ func Example() {
 	// db_delay_seconds{le="5e-06"} 3
 	// db_delay_seconds{le="+Inf"} 4
 	// db_delay_seconds_sum 0.00058005654
+	//
+	// # TYPE db_uptime_seconds counter
+	// # HELP db_uptime_seconds Duration since launch.
+	// db_uptime_seconds 5
+	//
+	// # TYPE db_disk_usage_ratio gauge
+	// # HELP db_disk_usage_ratio Sectors of the total capacity.
+	// db_disk_usage_ratio 0.47
 }
 
 // Label Combination
@@ -77,10 +83,8 @@ func Example_labels() {
 	Building("Genesis Pit", "Civilian Hospital").Set(800)
 	Arsenal("Genesis Pit", "Tech Center", "Nod").Set(500)
 	Arsenal("Genesis Pit", "Cyborg", "Nod").Set(900)
-	// attack
 	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(-596)
 	Building("Genesis Pit", "Civilian Hospital").Add(-490)
-	// tiberium
 	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(110)
 
 	// print
@@ -203,7 +207,7 @@ func ExampleMust2LabelHistogram() {
 	Duration("GET", "2xx").Add(0.0018714)
 	Duration("GET", "2xx").Add(0.0023789)
 
-	// print samples
+	// print
 	metrics.SkipTimestamp = true
 	demo.WriteText(os.Stdout)
 	// Output:
