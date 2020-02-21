@@ -37,12 +37,12 @@ Updates are error free by design, e.g., `CacheBytes.Add(-72)` and
 `DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`. The result may
 look like the following.
 
-```http
-HTTP/1.1 200 OK
-Content-Type: text/plain; version=0.0.4; charset=UTF-8
-Date: Fri, 21 Feb 2020 12:45:12 GMT
-Content-Length: 351
-
+```
+< HTTP/1.1 200 OK
+< Content-Type: text/plain; version=0.0.4; charset=UTF-8
+< Date: Fri, 21 Feb 2020 12:45:12 GMT
+< Content-Length: 351
+< 
 # Prometheus Samples
 
 # TYPE db_connects_total counter
@@ -59,12 +59,12 @@ db_disk_usage_ratio{device="sda"} 0.19 1582289097555
 ```
 
 Package `github.com/pascaldekloe/metrics/gostat` provides a defacto standard
-collection of Go metrics, similar to the setup of the
+collection of Go metrics, similar to the setup from the
 [original Prometheus library](https://github.com/prometheus/client_golang).
 
 ```go
-	// include default metrics (optional)
-	gostat.CaptureEvery(time.Minute)
+// include default metrics (optional)
+gostat.CaptureEvery(time.Minute)
 ```
 
 
