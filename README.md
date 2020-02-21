@@ -1,14 +1,28 @@
 [![API Documentation](https://godoc.org/github.com/pascaldekloe/metrics?status.svg)](https://godoc.org/github.com/pascaldekloe/metrics)
 [![Build Status](https://travis-ci.org/pascaldekloe/metrics.svg?branch=master)](https://travis-ci.org/pascaldekloe/metrics)
 
-# Metrics ⚡️
+## About
 
 Atomic measures with Prometheus exposition for the Go programming language.
 
-This implementation is faster and more straightforward, when compared to the
-[standard library](https://github.com/prometheus/client_golang).
+This is free and unencumbered software released into the
+[public domain](https://creativecommons.org/publicdomain/zero/1.0).
 
-The static registration functions require no further configuration.
+
+## Use
+
+```go
+import "github.com/pascaldekloe/metrics"
+
+func main() {
+	// mount exposition point
+	http.HandleFunc("/metrics", metrics.ServeHTTP)
+
+	// good to go…
+}
+```
+
+The registration functions require no further configuration.
 
 ```go
 // Package Metrics
@@ -19,25 +33,39 @@ var (
 )
 ```
 
-Updates are error free by design, e.g., `CacheBytes.Add(-72)` or
-`DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
+Updates are error free by design, e.g., `CacheBytes.Add(-72)` and
+`DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`. The result may
+look like the following.
 
-```go
-import "github.com/pascaldekloe/metrics"
-import "github.com/pascaldekloe/metrics/gostat"
+```http
+HTTP/1.1 200 OK
+Content-Type: text/plain; version=0.0.4; charset=UTF-8
+Date: Fri, 21 Feb 2020 12:45:12 GMT
+Content-Length: 351
 
-func main() {
-	// include default metrics
-	gostat.CaptureEvery(time.Minute)
-	// mount exposition point
-	http.HandleFunc("/metrics", metrics.ServeHTTP)
+# Prometheus Samples
 
-	// good to go…
-}
+# TYPE db_connects_total counter
+# HELP db_connects_total Number of established initiations.
+db_connects_total 4 1582289112766
+
+# TYPE db_cache_bytes gauge
+# HELP db_cache_bytes Size of collective responses.
+db_cache_bytes 7600 1582289112766
+
+# TYPE db_disk_usage_ratio gauge
+# HELP db_disk_usage_ratio Sectors of the total capacity.
+db_disk_usage_ratio{device="sda"} 0.19 1582289097555
 ```
 
-This is free and unencumbered software released into the
-[public domain](https://creativecommons.org/publicdomain/zero/1.0).
+Package `github.com/pascaldekloe/metrics/gostat` provides a defacto standard
+collection of Go metrics, similar to the setup of the
+[original Prometheus library](https://github.com/prometheus/client_golang).
+
+```go
+	// include default metrics (optional)
+	gostat.CaptureEvery(time.Minute)
+```
 
 
 ## Performance
