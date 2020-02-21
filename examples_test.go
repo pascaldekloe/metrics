@@ -37,7 +37,7 @@ func Example() {
 
 	// print
 	metrics.SkipTimestamp = true
-	metrics.WriteText(os.Stdout)
+	metrics.WriteTo(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//
@@ -89,7 +89,7 @@ func Example_labels() {
 
 	// print
 	metrics.SkipTimestamp = true
-	demo.WriteText(os.Stdout)
+	demo.WriteTo(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//
@@ -136,7 +136,7 @@ func Example_labelsFix() {
 
 	// print
 	metrics.SkipTimestamp = true
-	demo.WriteText(os.Stdout)
+	demo.WriteTo(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//
@@ -174,7 +174,7 @@ func ExampleMust1LabelHistogram() {
 
 	// print
 	metrics.SkipTimestamp = true
-	demo.WriteText(os.Stdout)
+	demo.WriteTo(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//
@@ -209,7 +209,7 @@ func ExampleMust2LabelHistogram() {
 
 	// print
 	metrics.SkipTimestamp = true
-	demo.WriteText(os.Stdout)
+	demo.WriteTo(os.Stdout)
 	// Output:
 	// # Prometheus Samples
 	//

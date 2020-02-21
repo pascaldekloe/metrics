@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"bytes"
+	"math"
 	"mime"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +11,39 @@ import (
 	"testing"
 	"time"
 )
+
+func TestWriteTo(t *testing.T) {
+	SkipTimestamp = true
+	reg := NewRegister()
+
+	var buf bytes.Buffer
+	n, err := reg.WriteTo(&buf)
+	if err != nil {
+		t.Fatal("got error:", err)
+	}
+	if n != int64(buf.Len()) {
+		t.Errorf("n = %d with %d bytes written", n, buf.Len())
+	}
+	if got, want := buf.String(), "# Prometheus Samples\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	reg.Must1LabelReal("v", "sign")("π").Set(math.Pi)
+
+	buf.Reset()
+	n, err = reg.WriteTo(&buf)
+	if n != int64(buf.Len()) {
+		t.Errorf("n = %d with %d bytes written", n, buf.Len())
+	}
+	const want = `# Prometheus Samples
+
+# TYPE v gauge
+v{sign="π"} 3.141592653589793
+`
+	if got := buf.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
 
 func TestServeHTTP(t *testing.T) {
 	SkipTimestamp = true
@@ -72,6 +107,10 @@ func (w *voidResponseWriter) WriteHeader(statusCode int) {}
 func (w *voidResponseWriter) Write(p []byte) (int, error) {
 	*w += voidResponseWriter(len(p))
 	return len(p), nil
+}
+func (w *voidResponseWriter) WriteString(s string) (int, error) {
+	*w += voidResponseWriter(len(s))
+	return len(s), nil
 }
 
 func BenchmarkServeHTTP(b *testing.B) {

@@ -31,89 +31,109 @@ func (reg *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	resp.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
-	reg.WriteText(resp)
+	reg.WriteTo(resp)
 }
 
 // WriteText serialises a sample of each metric in a simple text
 // format. All errors returned by Writer are ignored by design.
+// Deprecated: Use WriteTo instead.
 func WriteText(w io.Writer) {
 	std.WriteText(w)
 }
 
 // WriteText serialises a sample of each metric in a simple text
 // format. All errors returned by Writer are ignored by design.
+// Deprecated: Use WriteTo instead.
 func (reg *Register) WriteText(w io.Writer) {
-	// write buffer
-	buf := make([]byte, len(headerLine), 4096)
-	copy(buf, headerLine)
+	reg.WriteTo(w)
+}
 
-	var buckets []uint64 // reusable
+// WriteTo serialises a sample of each metric in a simple text
+// format as an io.WriterTo.
+func WriteTo(w io.Writer) (n int64, err error) {
+	return std.WriteTo(w)
+}
+
+// WriteTo serialises a sample of each metric in a simple text
+// format as an io.WriterTo.
+func (reg *Register) WriteTo(w io.Writer) (n int64, err error) {
+	wn, err := io.WriteString(w, headerLine)
+	n = int64(wn)
+	if err != nil {
+		return n, err
+	}
+
+	// resables
+	var buf []byte
+	var buckets []uint64
 
 	// snapshot
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()
 
-	// reuse to minimise time lookups
-	lineEnd := sampleLineEnd(make([]byte, 21))
-
 	// serialise samples in order of appearance
 	for _, m := range reg.metrics {
-		if cap(buf)-len(buf) < len(m.typeComment)+len(m.helpComment) {
-			w.Write(buf)
-			buf = buf[:0]
-			// need fresh timestamp after Write
-			lineEnd = sampleLineEnd(lineEnd)
-		}
-
 		buf = append(buf, m.typeComment...)
 		buf = append(buf, m.helpComment...)
 
 		switch m.typeID {
 		case counterID:
 			if m.counter != nil {
-				buf, lineEnd = m.counter.sample(w, buf, lineEnd)
+				buf = append(buf, m.counter.prefix...)
+				buf = strconv.AppendUint(buf, m.counter.Get(), 10)
+				buf = appendTimestamp(buf)
 			}
 
 			for _, l := range m.labels {
 				l.Lock()
 				view := l.counters
 				l.Unlock()
-				for _, c := range view {
-					buf, lineEnd = c.sample(w, buf, lineEnd)
+				for _, v := range view {
+					buf = append(buf, v.prefix...)
+					buf = strconv.AppendUint(buf, v.Get(), 10)
+					buf = appendTimestamp(buf)
 				}
 			}
 
 		case integerID:
 			if m.integer != nil {
-				buf, lineEnd = m.integer.sample(w, buf, lineEnd)
+				buf = append(buf, m.integer.prefix...)
+				buf = strconv.AppendInt(buf, m.integer.Get(), 10)
+				buf = appendTimestamp(buf)
 			}
 
 			for _, l := range m.labels {
 				l.Lock()
 				view := l.integers
 				l.Unlock()
-				for _, g := range view {
-					buf, lineEnd = g.sample(w, buf, lineEnd)
+				for _, v := range view {
+					buf = append(buf, v.prefix...)
+					buf = strconv.AppendInt(buf, v.Get(), 10)
+					buf = appendTimestamp(buf)
 				}
 			}
 
 		case realID:
 			if m.real != nil {
-				buf, lineEnd = m.real.sample(w, buf, lineEnd)
+				buf = append(buf, m.real.prefix...)
+				buf = strconv.AppendFloat(buf, m.real.Get(), 'g', -1, 64)
+				buf = appendTimestamp(buf)
 			}
 
 			for _, l := range m.labels {
 				l.Lock()
 				view := l.reals
 				l.Unlock()
-				for _, g := range view {
-					buf, lineEnd = g.sample(w, buf, lineEnd)
+				for _, v := range view {
+					buf = append(buf, v.prefix...)
+					buf = strconv.AppendFloat(buf, v.Get(), 'g', -1, 64)
+					buf = appendTimestamp(buf)
 				}
 			}
 
 		case counterSampleID, realSampleID:
 			if m.sample != nil {
-				buf, lineEnd = m.sample.sample(w, buf, lineEnd)
+				buf = m.sample.append(buf)
 			}
 
 			for _, l := range m.labels {
@@ -121,84 +141,37 @@ func (reg *Register) WriteText(w io.Writer) {
 				view := l.samples
 				l.Unlock()
 				for _, v := range view {
-					buf, lineEnd = v.sample(w, buf, lineEnd)
+					buf = v.append(buf)
 				}
 			}
 
 		case histogramID:
 			if m.histogram != nil {
-				buf, lineEnd, buckets = m.histogram.sample(w, buf, lineEnd, buckets)
+				buf = m.histogram.append(buf, &buckets)
 			}
 
 			for _, l := range m.labels {
 				l.Lock()
 				view := l.histograms
 				l.Unlock()
-				for _, h := range view {
-					buf, lineEnd, buckets = h.sample(w, buf, lineEnd, buckets)
+				for _, v := range view {
+					buf = v.append(buf, &buckets)
 				}
 			}
 		}
+
+		wn, err = w.Write(buf)
+		n += int64(wn)
+		if err != nil {
+			return n, err
+		}
+		buf = buf[:0]
 	}
 
-	if len(buf) != 0 {
-		w.Write(buf)
-	}
+	return n, nil
 }
 
-func (m *Counter) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(m.prefix)+maxUint64Text+len(lineEnd) {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
-	buf = append(buf, m.prefix...)
-	buf = strconv.AppendUint(buf, m.Get(), 10)
-	buf = append(buf, lineEnd...)
-
-	return buf, lineEnd
-}
-
-func (m *Integer) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(m.prefix)+maxInt64Text+len(lineEnd) {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
-	buf = append(buf, m.prefix...)
-	buf = strconv.AppendInt(buf, m.Get(), 10)
-	buf = append(buf, lineEnd...)
-
-	return buf, lineEnd
-}
-
-func (m *Real) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(m.prefix)+maxFloat64Text+len(lineEnd) {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
-	buf = append(buf, m.prefix...)
-	buf = strconv.AppendFloat(buf, m.Get(), 'g', -1, 64)
-	buf = append(buf, lineEnd...)
-
-	return buf, lineEnd
-}
-
-func (m *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
-	if cap(buf)-len(buf) < len(m.prefix)+maxFloat64Text+21 {
-		w.Write(buf)
-		buf = buf[:0]
-		// need fresh timestamp after Write
-		lineEnd = sampleLineEnd(lineEnd)
-	}
-
+func (m *Sample) append(buf []byte) []byte {
 	if value, timestamp := m.Get(); timestamp != 0 {
 		buf = append(buf, m.prefix...)
 		buf = strconv.AppendFloat(buf, value, 'g', -1, 64)
@@ -208,69 +181,55 @@ func (m *Sample) sample(w io.Writer, buf, lineEnd []byte) ([]byte, []byte) {
 		}
 		buf = append(buf, '\n')
 	}
-
-	return buf, lineEnd
+	return buf
 }
 
-func (h *Histogram) sample(w io.Writer, buf, lineEnd []byte, buckets []uint64) ([]byte, []byte, []uint64) {
-	// calculate buffer space required
-	fit := len(h.sumPrefix) + len(h.countPrefix) + maxFloat64Text + maxUint64Text + 2*len(lineEnd)
-	for _, prefix := range h.bucketPrefixes {
-		fit += len(prefix) + maxUint64Text + len(lineEnd)
-	}
-	if len(buf) != 0 && cap(buf)-len(buf) < fit {
-		w.Write(buf)
-		buf = buf[:0]
-	}
-	// buf either fits or empty (to minimise memory allocation)
-
-	buckets, count, sum := h.Get(buckets[:0])
-
-	// need fresh timestamp after Write and/or Lock
-	lineEnd = sampleLineEnd(lineEnd)
+func (h *Histogram) append(buf []byte, buckets *[]uint64) []byte {
+	var count uint64
+	var sum float64
+	*buckets, count, sum = h.Get((*buckets)[:0])
 
 	buf = append(buf, h.countPrefix...)
 	offset := len(buf)
 	buf = strconv.AppendUint(buf, count, 10)
 	countSerial := buf[offset:]
-	buf = append(buf, lineEnd...)
+
+	timeOffset := len(buf)
+	buf = appendTimestamp(buf)
+	timestamp := buf[timeOffset:]
 
 	// buckets
 	var cum uint64
 	for i, prefix := range h.bucketPrefixes {
-		if i >= len(buckets) {
+		if i >= len(*buckets) {
 			// (redundant) +Inf bucket
 			buf = append(buf, prefix...)
 			buf = append(buf, countSerial...)
-			buf = append(buf, lineEnd...)
+			buf = append(buf, timestamp...)
 			break
 		}
 
-		cum += buckets[i]
+		cum += (*buckets)[i]
 		buf = append(buf, prefix...)
 		buf = strconv.AppendUint(buf, cum, 10)
-		buf = append(buf, lineEnd...)
+		buf = append(buf, timestamp...)
 	}
 
 	// sum
 	buf = append(buf, h.sumPrefix...)
 	buf = strconv.AppendFloat(buf, sum, 'g', -1, 64)
-	buf = append(buf, lineEnd...)
+	buf = append(buf, timestamp...)
 
-	return buf, lineEnd, buckets
+	return buf
 }
 
-// SampleLineEnd may include a timestamp, and terminates with a line feed.
-func sampleLineEnd(buf []byte) []byte {
-	buf = buf[:1]
-	if SkipTimestamp {
-		buf[0] = '\n'
-	} else {
-		buf[0] = ' '
+func appendTimestamp(buf []byte) []byte {
+	if !SkipTimestamp {
+		buf = append(buf, ' ')
 		ms := time.Now().UnixNano() / 1e6
 		buf = strconv.AppendInt(buf, ms, 10)
-		buf = append(buf, '\n')
 	}
 
+	buf = append(buf, '\n')
 	return buf
 }

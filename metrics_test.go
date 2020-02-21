@@ -63,7 +63,7 @@ func TestHelp(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	reg.WriteText(&buf)
+	reg.WriteTo(&buf)
 
 	got := make(map[string]string)
 	for {
