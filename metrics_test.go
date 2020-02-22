@@ -101,9 +101,9 @@ func TestHistogramBuckets(t *testing.T) {
 		feed []float64
 		want []float64
 	}{
+		{},
 		{[]float64{4, 1, 2}, []float64{1, 2, 4}},
 		{[]float64{8, math.Inf(1)}, []float64{8}},
-		{[]float64{math.Inf(-1), 8}, []float64{8}},
 		{[]float64{math.NaN(), 7, math.Inf(1), 3}, []float64{3, 7}},
 	}
 

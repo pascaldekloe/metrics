@@ -243,21 +243,27 @@ func (h *Histogram) AddSince(start time.Time) {
 	h.Add(float64(time.Now().Sub(start)) * 1e-9)
 }
 
-var negativeInfinity = math.Inf(-1)
-
 func newHistogram(name string, bucketBounds []float64) *Histogram {
-	// sort, dedupelicate, drop not-a-number, drop infinities
-	sort.Float64s(bucketBounds)
-	writeIndex := 0
-	last := negativeInfinity
+	// Use copy of bucketBounds to prevent unexpected mutations,
+	// in case the variadic was invoked with a collapsed slice.
+	var a []float64
 	for _, f := range bucketBounds {
-		if f > last && f <= math.MaxFloat64 {
-			bucketBounds[writeIndex] = f
-			writeIndex++
-			last = f
+		// skip NaN and ∞
+		if f == f && f <= math.MaxFloat64 {
+			a = append(a, f)
 		}
 	}
-	bucketBounds = bucketBounds[:writeIndex]
+	if len(a) < 2 {
+		bucketBounds = a
+	} else {
+		sort.Float64s(a)
+		bucketBounds = a[:1]
+		for _, f := range a[1:] {
+			if f > bucketBounds[len(bucketBounds)-1] {
+				bucketBounds = append(bucketBounds, f)
+			}
+		}
+	}
 
 	// Counters are memory aligned for atomic access.
 	// The 15 64-bit padding entries ensure isolation
