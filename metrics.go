@@ -234,13 +234,13 @@ func (h *Histogram) Add(value float64) {
 	atomic.AddUint64(&h.hotAndColdCounts[hotIndex*16], 1)
 }
 
-// AddSince applies the duration since start (in seconds) to the countings.
-// E.g., the following one-liner measures function delay.
+// AddSince applies the number of seconds since start to the countings.
+// The following one-liner measures the execution time of a function.
 //
 //	defer DurationHistogram.AddSince(time.Now())
 //
 func (h *Histogram) AddSince(start time.Time) {
-	h.Add(float64(time.Now().UnixNano()-start.UnixNano()) * 1e-9)
+	h.Add(float64(time.Now().Sub(start)) * 1e-9)
 }
 
 var negativeInfinity = math.Inf(-1)
