@@ -98,16 +98,16 @@ func nameFromPrefix(prefix string) string {
 	return prefix
 }
 
-// Name returns the metrics identifier.
+// Name returns the metric identifier.
 func (m *Counter) Name() string { return nameFromPrefix(m.prefix) }
 
-// Name returns the metrics identifier.
+// Name returns the metric identifier.
 func (m *Integer) Name() string { return nameFromPrefix(m.prefix) }
 
-// Name returns the metrics identifier.
+// Name returns the metric identifier.
 func (m *Real) Name() string { return nameFromPrefix(m.prefix) }
 
-// Name returns the metrics identifier.
+// Name returns the metric identifier.
 func (m *Sample) Name() string { return nameFromPrefix(m.prefix) }
 
 // Get returns the current value.
@@ -135,17 +135,17 @@ func (m *Sample) Get() (value float64, timestamp uint64) {
 	return c.value, c.timestamp
 }
 
-// Set replaces the current value.
+// Set defines the current value.
 func (m *Integer) Set(update int64) {
 	atomic.StoreInt64(&m.value, update)
 }
 
-// Set replaces the current value.
+// Set defines the current value.
 func (m *Real) Set(update float64) {
 	atomic.StoreUint64(&m.valueBits, math.Float64bits(update))
 }
 
-// Set replaces the current value.
+// Set defines the current value.
 func (m *Sample) Set(value float64, timestamp time.Time) {
 	m.value.Store(capture{value, uint64(timestamp.UnixNano()) / 1e6})
 }
@@ -165,6 +165,10 @@ func (m *Integer) Add(n int64) {
 // It also provides a sum of all observed values.
 // Multiple goroutines may invoke methods on a Histogram simultaneously.
 type Histogram struct {
+	// Upper value for each bucket, sorted, +Inf omitted.
+	// This field is read-only.
+	BucketBounds []float64
+
 	// Counters are memory aligned for atomic access.
 	// The 15 64-bit padding entries ensure isolation
 	// with CPU cache lines up to 128 bytes in size.
@@ -196,10 +200,6 @@ type Histogram struct {
 
 	// metric identifier
 	name string
-
-	// Upper value for each bucket, sorted, +Inf omitted.
-	// This field is read-only.
-	BucketBounds []float64
 
 	// corresponding name + label serials for each BucketBounds, including +Inf
 	bucketPrefixes         []string
@@ -298,7 +298,7 @@ func (h *Histogram) prefix(name string) {
 	h.sumPrefix = name + "_sum "
 }
 
-// Name returns the metrics identifier.
+// Name returns the metric identifier.
 func (h *Histogram) Name() string { return h.name }
 
 // Get appends the observation counts for each Histogram.BucketBounds to a and
