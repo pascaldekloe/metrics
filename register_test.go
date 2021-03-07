@@ -1,6 +1,10 @@
-package metrics
+package metrics_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/pascaldekloe/metrics"
+)
 
 func TestRegisterLabelClash(t *testing.T) {
 	var labels = []string{"first", "another"}
@@ -13,7 +17,7 @@ func TestRegisterLabelClash(t *testing.T) {
 				continue
 			}
 
-			f := NewRegister().Must2LabelCounter
+			f := metrics.NewRegister().Must2LabelCounter
 			f("test_metric", labels[0], labels[1])
 			func() {
 				defer func() {
@@ -35,7 +39,7 @@ func TestRegisterLabelClash(t *testing.T) {
 					continue
 				}
 
-				f := NewRegister().Must3LabelCounter
+				f := metrics.NewRegister().Must3LabelCounter
 				f("test_metric", labels[0], labels[1], labels[2])
 				func() {
 					defer func() {

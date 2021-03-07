@@ -1,4 +1,4 @@
-package metrics
+package metrics_test
 
 import (
 	"bytes"
@@ -9,10 +9,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pascaldekloe/metrics"
 )
 
 func TestName(t *testing.T) {
-	reg := NewRegister()
+	reg := metrics.NewRegister()
 
 	if got := reg.MustCounter("c", "").Name(); got != "c" {
 		t.Errorf(`counter got %q, want "c"`, got)
@@ -44,7 +46,7 @@ func TestName(t *testing.T) {
 }
 
 func TestHelp(t *testing.T) {
-	reg := NewRegister()
+	reg := metrics.NewRegister()
 
 	reg.MustReal("g", "set on gauge")
 	reg.Must1LabelReal("lm", "l")
@@ -95,7 +97,7 @@ func TestHelp(t *testing.T) {
 }
 
 func TestHistogramBuckets(t *testing.T) {
-	reg := NewRegister()
+	reg := metrics.NewRegister()
 
 	var golden = []struct {
 		feed []float64
@@ -117,7 +119,7 @@ func TestHistogramBuckets(t *testing.T) {
 
 func BenchmarkGet(b *testing.B) {
 	b.Run("histogram5", func(b *testing.B) {
-		h := NewRegister().MustHistogram("bench_histogram_unit", "", .01, .02, .05, .1)
+		h := metrics.NewRegister().MustHistogram("bench_histogram_unit", "", .01, .02, .05, .1)
 
 		b.Run("sequential", func(b *testing.B) {
 			var buckets []uint64
@@ -145,7 +147,7 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkSet(b *testing.B) {
 	b.Run("real", func(b *testing.B) {
-		m := NewRegister().MustReal("bench_real_unit", "")
+		m := metrics.NewRegister().MustReal("bench_real_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -168,7 +170,7 @@ func BenchmarkSet(b *testing.B) {
 	})
 
 	b.Run("sample", func(b *testing.B) {
-		m := NewRegister().MustRealSample("bench_sample_unit", "")
+		m := metrics.NewRegister().MustRealSample("bench_sample_unit", "")
 		timestamp := time.Now()
 
 		b.Run("sequential", func(b *testing.B) {
@@ -194,7 +196,7 @@ func BenchmarkSet(b *testing.B) {
 
 func BenchmarkAdd(b *testing.B) {
 	b.Run("counter", func(b *testing.B) {
-		m := NewRegister().MustCounter("bench_counter_unit", "")
+		m := metrics.NewRegister().MustCounter("bench_counter_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -217,7 +219,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("integer", func(b *testing.B) {
-		m := NewRegister().MustInteger("bench_gauge_unit", "")
+		m := metrics.NewRegister().MustInteger("bench_gauge_unit", "")
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -240,7 +242,7 @@ func BenchmarkAdd(b *testing.B) {
 	})
 
 	b.Run("histogram5", func(b *testing.B) {
-		h := NewRegister().MustHistogram("bench_histogram_unit", "", 1, 2, 5, 6)
+		h := metrics.NewRegister().MustHistogram("bench_histogram_unit", "", 1, 2, 5, 6)
 
 		b.Run("sequential", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

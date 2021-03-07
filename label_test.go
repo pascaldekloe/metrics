@@ -1,12 +1,16 @@
-package metrics
+package metrics_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/pascaldekloe/metrics"
+)
 
 func BenchmarkLabel(b *testing.B) {
 	values := [...]string{"one", "two", "three", "four"}
-	label1 := NewRegister().Must1LabelReal("bench_label_unit", "first")
-	label2 := NewRegister().Must2LabelReal("bench_label_unit", "first", "second")
-	label3 := NewRegister().Must3LabelReal("bench_label_unit", "first", "second", "third")
+	label1 := metrics.NewRegister().Must1LabelReal("bench_label_unit", "first")
+	label2 := metrics.NewRegister().Must2LabelReal("bench_label_unit", "first", "second")
+	label3 := metrics.NewRegister().Must3LabelReal("bench_label_unit", "first", "second", "third")
 
 	b.Run("sequential", func(b *testing.B) {
 		b.Run("4", func(b *testing.B) {

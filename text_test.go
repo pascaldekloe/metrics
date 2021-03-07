@@ -1,4 +1,4 @@
-package metrics
+package metrics_test
 
 import (
 	"bytes"
@@ -10,11 +10,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pascaldekloe/metrics"
 )
 
 func TestWriteTo(t *testing.T) {
-	SkipTimestamp = true
-	reg := NewRegister()
+	metrics.SkipTimestamp = true
+	reg := metrics.NewRegister()
 
 	var buf bytes.Buffer
 	n, err := reg.WriteTo(&buf)
@@ -46,8 +48,8 @@ v{sign="π"} 3.141592653589793
 }
 
 func TestServeHTTP(t *testing.T) {
-	SkipTimestamp = true
-	reg := NewRegister()
+	metrics.SkipTimestamp = true
+	reg := metrics.NewRegister()
 
 	m1 := reg.MustReal("m1", "🆘")
 	m1.Set(42)
@@ -87,7 +89,7 @@ m2 9
 
 func TestHTTPMethods(t *testing.T) {
 	rec := httptest.NewRecorder()
-	NewRegister().ServeHTTP(rec, httptest.NewRequest("POST", "/metrics", nil))
+	metrics.NewRegister().ServeHTTP(rec, httptest.NewRequest("POST", "/metrics", nil))
 	got := rec.Result()
 
 	if got.StatusCode != 405 {
@@ -114,7 +116,7 @@ func (w *voidResponseWriter) WriteString(s string) (int, error) {
 }
 
 func BenchmarkServeHTTP(b *testing.B) {
-	var reg *Register
+	var reg *metrics.Register
 	benchmarkHTTPHandler := func(b *testing.B) {
 		req := httptest.NewRequest("GET", "/metrics", nil)
 		var w voidResponseWriter
@@ -126,43 +128,43 @@ func BenchmarkServeHTTP(b *testing.B) {
 
 	for _, n := range []int{32, 1024, 32768} {
 		b.Run(strconv.Itoa(n), func(b *testing.B) {
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.MustCounter("integer"+strconv.Itoa(i)+"_bench_unit", "").Add(uint64(i))
 			}
 			b.Run("counter", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.MustReal("real"+strconv.Itoa(i)+"_bench_unit", "").Set(float64(i))
 			}
 			b.Run("real", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.MustInteger("integer"+strconv.Itoa(i)+"_bench_unit", "").Set(int64(i))
 			}
 			b.Run("integer", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.MustHistogram("histogram"+strconv.Itoa(i)+"_bench_unit", "", 1, 2, 3, 4).Add(3.14)
 			}
 			b.Run("histogram5", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.Must1LabelReal("real"+strconv.Itoa(i)+"_label_bench_unit", "first")(strconv.Itoa(i % 5)).Set(float64(i))
 			}
 			b.Run("label5", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.Must3LabelReal("real"+strconv.Itoa(i)+"_3label_bench_unit", "first", "second", "third")(strconv.Itoa(i%2), strconv.Itoa(i%3), strconv.Itoa(i%5)).Set(float64(i))
 			}
 			b.Run("label2x3x5", benchmarkHTTPHandler)
 
-			reg = NewRegister()
+			reg = metrics.NewRegister()
 			for i := n; i > 0; i-- {
 				reg.MustRealSample("real"+strconv.Itoa(i)+"_bench_unit", "").Set(float64(i), time.Now())
 			}
