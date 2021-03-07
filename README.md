@@ -39,23 +39,22 @@ look like the following.
 
 ```
 < HTTP/1.1 200 OK
-< Content-Type: text/plain; version=0.0.4; charset=UTF-8
-< Date: Fri, 21 Feb 2020 12:45:12 GMT
+< Content-Type: text/plain;version=0.0.4;charset=utf-8
+< Date: Sun, 07 Mar 2021 15:22:47 GMT
 < Content-Length: 351
 < 
 # Prometheus Samples
 
 # TYPE db_connects_total counter
 # HELP db_connects_total Number of established initiations.
-db_connects_total 4 1582289112766
+db_connects_total 4 1615130567389
 
 # TYPE db_cache_bytes gauge
 # HELP db_cache_bytes Size of collective responses.
-db_cache_bytes 7600 1582289112766
+db_cache_bytes 7600 1615130567389
 
 # TYPE db_disk_usage_ratio gauge
-# HELP db_disk_usage_ratio Sectors of the total capacity.
-db_disk_usage_ratio{device="sda"} 0.19 1582289097555
+db_disk_usage_ratio{device="sda"} 0.19 1615130563595
 ```
 
 Package `github.com/pascaldekloe/metrics/gostat` provides a defacto standard

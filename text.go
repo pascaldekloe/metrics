@@ -30,7 +30,7 @@ func (reg *Register) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resp.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=UTF-8")
+	resp.Header().Set("Content-Type", "text/plain;version=0.0.4;charset=utf-8")
 	reg.WriteTo(resp)
 }
 
