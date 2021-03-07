@@ -77,16 +77,11 @@ type Real struct {
 // with a zero timestamp.
 // Multiple goroutines may invoke methods on a Sample simultaneously.
 type Sample struct {
-	// value holds the current capture
-	value atomic.Value
+	mux       sync.Mutex
+	value     float64 // current capture
+	timestamp uint64  // capture moment
 	// sample line start as in <name> <label-map>? ' '
 	prefix string
-}
-
-// Capture is a Sample value.
-type capture struct {
-	value     float64
-	timestamp uint64
 }
 
 func nameFromPrefix(prefix string) string {
@@ -127,12 +122,9 @@ func (m *Real) Get() float64 {
 
 // Get returns the current value with its Unix time in milliseconds.
 func (m *Sample) Get() (value float64, timestamp uint64) {
-	v := m.value.Load()
-	if v == nil {
-		return
-	}
-	c := v.(capture)
-	return c.value, c.timestamp
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	return m.value, m.timestamp
 }
 
 // Set defines the current value.
@@ -147,7 +139,10 @@ func (m *Real) Set(update float64) {
 
 // Set defines the current value.
 func (m *Sample) Set(value float64, timestamp time.Time) {
-	m.value.Store(capture{value, uint64(timestamp.UnixNano()) / 1e6})
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.value = value
+	m.timestamp = uint64(timestamp.UnixNano()) / 1e6
 }
 
 // Add increments the current value with n.
