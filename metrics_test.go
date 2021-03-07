@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"math"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -94,6 +95,51 @@ func TestHelp(t *testing.T) {
 			t.Errorf("got %q for %q, want %q", s, name, help)
 		}
 	}
+}
+
+func ExampleHistogram() {
+	// setup
+	demo := metrics.NewRegister()
+	Duration := demo.Must2LabelHistogram("http_latency_seconds", "method", "status", 0.001, 0.005, 0.025, 0.0125)
+	demo.MustHelp("http_latency_seconds", "Time from request initiation until response body retrieval.")
+
+	// measures
+	Duration("GET", "2xx").Add(0.076875)
+	Duration("GET", "3xx").Add(0.000141)
+	Duration("OPTIONS", "2xx").Add(0.000009)
+	Duration("GET", "2xx").Add(0.002277)
+	Duration("GET", "2xx").Add(0.001871)
+	Duration("GET", "2xx").Add(0.002378)
+
+	// print
+	metrics.SkipTimestamp = true
+	demo.WriteTo(os.Stdout)
+	// Output:
+	// # Prometheus Samples
+	//
+	// # TYPE http_latency_seconds histogram
+	// # HELP http_latency_seconds Time from request initiation until response body retrieval.
+	// http_latency_seconds_count{method="GET",status="2xx"} 4
+	// http_latency_seconds{le="0.001",method="GET",status="2xx"} 0
+	// http_latency_seconds{le="0.005",method="GET",status="2xx"} 3
+	// http_latency_seconds{le="0.0125",method="GET",status="2xx"} 3
+	// http_latency_seconds{le="0.025",method="GET",status="2xx"} 3
+	// http_latency_seconds{le="+Inf",method="GET",status="2xx"} 4
+	// http_latency_seconds_sum{method="GET",status="2xx"} 0.083401
+	// http_latency_seconds_count{method="GET",status="3xx"} 1
+	// http_latency_seconds{le="0.001",method="GET",status="3xx"} 1
+	// http_latency_seconds{le="0.005",method="GET",status="3xx"} 1
+	// http_latency_seconds{le="0.0125",method="GET",status="3xx"} 1
+	// http_latency_seconds{le="0.025",method="GET",status="3xx"} 1
+	// http_latency_seconds{le="+Inf",method="GET",status="3xx"} 1
+	// http_latency_seconds_sum{method="GET",status="3xx"} 0.000141
+	// http_latency_seconds_count{method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds{le="0.001",method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds{le="0.005",method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds{le="0.0125",method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds{le="0.025",method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds{le="+Inf",method="OPTIONS",status="2xx"} 1
+	// http_latency_seconds_sum{method="OPTIONS",status="2xx"} 9e-06
 }
 
 func TestHistogramBuckets(t *testing.T) {

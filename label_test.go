@@ -1,10 +1,39 @@
 package metrics_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/pascaldekloe/metrics"
 )
+
+func Example_labels() {
+	// setup
+	demo := metrics.NewRegister()
+	Building := demo.Must2LabelInteger("hitpoints_total", "ground", "building")
+	Arsenal := demo.Must3LabelInteger("hitpoints_total", "ground", "arsenal", "side")
+	demo.MustHelp("hitpoints_total", "Damage Capacity")
+
+	// measures
+	Building("Genesis Pit", "Civilian Hospital").Set(800)
+	Arsenal("Genesis Pit", "Tech Center", "Nod").Set(500)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Set(900)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(-596)
+	Building("Genesis Pit", "Civilian Hospital").Add(-490)
+	Arsenal("Genesis Pit", "Cyborg", "Nod").Add(110)
+
+	// print
+	metrics.SkipTimestamp = true
+	demo.WriteTo(os.Stdout)
+	// Output:
+	// # Prometheus Samples
+	//
+	// # TYPE hitpoints_total gauge
+	// # HELP hitpoints_total Damage Capacity
+	// hitpoints_total{building="Civilian Hospital",ground="Genesis Pit"} 310
+	// hitpoints_total{arsenal="Tech Center",ground="Genesis Pit",side="Nod"} 500
+	// hitpoints_total{arsenal="Cyborg",ground="Genesis Pit",side="Nod"} 414
+}
 
 func BenchmarkLabel(b *testing.B) {
 	values := [...]string{"one", "two", "three", "four"}
