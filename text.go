@@ -63,9 +63,7 @@ func (reg *Register) WriteTo(w io.Writer) (n int64, err error) {
 		return n, err
 	}
 
-	// resables
-	var buf []byte
-	var buckets []uint64
+	buf := make([]byte, 0, 512)
 
 	// snapshot
 	reg.mutex.RLock()
@@ -147,7 +145,7 @@ func (reg *Register) WriteTo(w io.Writer) (n int64, err error) {
 
 		case histogramID:
 			if m.histogram != nil {
-				buf = m.histogram.append(buf, &buckets)
+				buf = m.histogram.append(buf)
 			}
 
 			for _, l := range m.labels {
@@ -155,7 +153,7 @@ func (reg *Register) WriteTo(w io.Writer) (n int64, err error) {
 				view := l.histograms
 				l.Unlock()
 				for _, v := range view {
-					buf = v.append(buf, &buckets)
+					buf = v.append(buf)
 				}
 			}
 		}
@@ -184,10 +182,9 @@ func (m *Sample) append(buf []byte) []byte {
 	return buf
 }
 
-func (h *Histogram) append(buf []byte, buckets *[]uint64) []byte {
-	var count uint64
-	var sum float64
-	*buckets, count, sum = h.Get((*buckets)[:0])
+func (h *Histogram) append(buf []byte) []byte {
+	var stack [7]uint64
+	buckets, count, sum := h.Get(stack[:0])
 
 	buf = append(buf, h.countPrefix...)
 	offset := len(buf)
@@ -201,7 +198,7 @@ func (h *Histogram) append(buf []byte, buckets *[]uint64) []byte {
 	// buckets
 	var cum uint64
 	for i, prefix := range h.bucketPrefixes {
-		if i >= len(*buckets) {
+		if i >= len(buckets) {
 			// (redundant) +Inf bucket
 			buf = append(buf, prefix...)
 			buf = append(buf, countSerial...)
@@ -209,7 +206,7 @@ func (h *Histogram) append(buf []byte, buckets *[]uint64) []byte {
 			break
 		}
 
-		cum += (*buckets)[i]
+		cum += buckets[i]
 		buf = append(buf, prefix...)
 		buf = strconv.AppendUint(buf, cum, 10)
 		buf = append(buf, timestamp...)
