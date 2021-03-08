@@ -160,13 +160,16 @@ func (m *Integer) Add(n int64) {
 // It also provides a sum of all observed values.
 // Multiple goroutines may invoke methods on a Histogram simultaneously.
 type Histogram struct {
-	// Upper value for each bucket, sorted, +Inf omitted.
-	// This field is read-only.
-	BucketBounds []float64
-
 	// Counters are memory aligned for atomic access.
 	// The 15 64-bit padding entries ensure isolation
 	// with CPU cache lines up to 128 bytes in size.
+
+	// The total number of observations are stored at index 0 when the hot
+	// index is 0. Otherwise, the index is 16 (when the hot index is 1).
+	hotAndColdCounts [2 * 16]uint64
+	// The sums of all observed values are stored at index 0 when the hot
+	// index is 0. Otherwise, the index is 16 (when the hot index is 1).
+	hotAndColdSumBits [2 * 16]uint64
 
 	// CountAndHotIndex enables lock-free writes with use of atomic updates.
 	// The most significant bit is the hot index [0 or 1] of each hotAndCold
@@ -181,17 +184,13 @@ type Histogram struct {
 	// cool one completed. All cool fields must be merged into the new hot
 	// before the unlock of switchMutex.
 	countAndHotIndex uint64
-	padding          [15]uint64
 
-	// total number of observations
-	hotAndColdCounts [2 * 16]uint64
-	// sums all observed values
-	hotAndColdSumBits [2 * 16]uint64
 	// counts for each BucketBounds, +Inf omitted
 	hotAndColdBuckets [2][]uint64
 
-	// locked on hotAndCold switch (by reads)
-	switchMutex sync.Mutex
+	// Upper value for each bucket, sorted, +Inf omitted.
+	// This field is read-only.
+	BucketBounds []float64
 
 	// metric identifier
 	name string
@@ -199,6 +198,9 @@ type Histogram struct {
 	// corresponding name + label serials for each BucketBounds, including +Inf
 	bucketPrefixes         []string
 	sumPrefix, countPrefix string
+
+	// locked on hotAndCold switch (by reads)
+	switchMutex sync.Mutex
 }
 
 // Add applies value to the countings.
@@ -312,7 +314,7 @@ func (h *Histogram) Get(a []uint64) (buckets []uint64, count uint64, sum float64
 
 	// write destination after switch
 	hotIndex := updated >> 63
-	coldIndex := (^hotIndex) & 1
+	coldIndex := hotIndex ^ 1
 
 	// number of writes to cold
 	count = updated &^ (1 << 63)
