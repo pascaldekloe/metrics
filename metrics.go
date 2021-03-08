@@ -237,7 +237,7 @@ func (h *Histogram) Add(value float64) {
 //	defer DurationHistogram.AddSince(time.Now())
 //
 func (h *Histogram) AddSince(start time.Time) {
-	h.Add(float64(time.Now().Sub(start)) * 1e-9)
+	h.Add(float64(time.Since(start)) * 1e-9)
 }
 
 func newHistogram(name string, bucketBounds []float64) *Histogram {
