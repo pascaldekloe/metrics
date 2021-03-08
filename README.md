@@ -57,70 +57,152 @@ for detail on capturing.
 
 ## Performance
 
-The following benchmarks were measured on a 3.5 GHz Xeon from the year 2013.
+The following benchmarks were measured on a Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz.
 
 ```
-name                           time/op
-Label/sequential/4-12            20.6ns ± 0%
-Label/sequential/4x4-12          25.1ns ± 0%
-Label/sequential/4x4x4-12        46.2ns ± 1%
-Label/parallel/4-12               100ns ± 0%
-Label/parallel/4x4-12             119ns ± 0%
-Label/parallel/4x4x4-12           155ns ± 0%
-Get/histogram5/sequential-12      105ns ± 0%
-Get/histogram5/2routines-12       140ns ± 0%
-Set/real/sequential-12           5.71ns ± 0%
-Set/real/2routines-12            14.5ns ±32%
-Set/sample/sequential-12         33.0ns ± 0%
-Set/sample/2routines-12          42.4ns ± 1%
-Add/counter/sequential-12        5.71ns ± 0%
-Add/counter/2routines-12         16.2ns ±22%
-Add/integer/sequential-12        5.70ns ± 0%
-Add/integer/2routines-12         16.7ns ±19%
-Add/histogram5/sequential-12     29.7ns ± 0%
-Add/histogram5/2routines-12      71.5ns ±11%
-ServeHTTP/32/counter-12          2.08µs ± 0%
-ServeHTTP/32/real-12             3.42µs ± 0%
-ServeHTTP/32/integer-12          2.09µs ± 0%
-ServeHTTP/32/histogram5-12       11.9µs ± 0%
-ServeHTTP/32/label5-12           3.92µs ± 1%
-ServeHTTP/32/label2x3x5-12       3.98µs ± 1%
-ServeHTTP/32/sample-12           3.45µs ± 0%
-ServeHTTP/1024/counter-12        41.2µs ± 1%
-ServeHTTP/1024/real-12           81.1µs ± 3%
-ServeHTTP/1024/integer-12        43.0µs ± 2%
-ServeHTTP/1024/histogram5-12      342µs ± 1%
-ServeHTTP/1024/label5-12         97.7µs ± 4%
-ServeHTTP/1024/label2x3x5-12     98.2µs ± 3%
-ServeHTTP/1024/sample-12         82.4µs ± 1%
-ServeHTTP/32768/counter-12       1.36ms ± 3%
-ServeHTTP/32768/real-12          2.63ms ± 4%
-ServeHTTP/32768/integer-12       1.36ms ± 2%
-ServeHTTP/32768/histogram5-12    12.1ms ± 1%
-ServeHTTP/32768/label5-12        3.35ms ± 1%
-ServeHTTP/32768/label2x3x5-12    3.44ms ± 1%
-ServeHTTP/32768/sample-12        2.73ms ± 1%
+name                          time/op
+Label/sequential/4-4            22.2ns ± 1%
+Label/sequential/4x4-4          25.9ns ± 1%
+Label/sequential/4x4x4-4        42.2ns ± 1%
+Label/parallel/4-4              45.9ns ± 0%
+Label/parallel/4x4-4            50.8ns ± 1%
+Label/parallel/4x4x4-4          71.7ns ± 1%
+Get/histogram5/sequential-4     89.1ns ± 0%
+Get/histogram5/2routines-4       112ns ± 2%
+Set/real/sequential-4           6.74ns ± 0%
+Set/real/2routines-4            14.8ns ± 4%
+Set/sample/sequential-4         18.6ns ± 6%
+Set/sample/2routines-4          22.2ns ± 1%
+Add/counter/sequential-4        6.75ns ± 0%
+Add/counter/2routines-4         21.2ns ± 1%
+Add/integer/sequential-4        6.75ns ± 0%
+Add/integer/2routines-4         21.2ns ± 1%
+Add/histogram5/sequential-4     37.9ns ± 0%
+Add/histogram5/2routines-4      85.9ns ± 1%
+ServeHTTP/32/counter-4          1.11µs ± 0%
+ServeHTTP/32/real-4             2.24µs ± 1%
+ServeHTTP/32/integer-4          1.13µs ± 1%
+ServeHTTP/32/histogram5-4       9.85µs ± 0%
+ServeHTTP/32/label5-4           2.73µs ± 1%
+ServeHTTP/32/label2x3x5-4       2.79µs ± 2%
+ServeHTTP/32/sample-4           2.70µs ± 1%
+ServeHTTP/1024/counter-4        32.1µs ± 1%
+ServeHTTP/1024/real-4           62.5µs ± 2%
+ServeHTTP/1024/integer-4        32.6µs ± 1%
+ServeHTTP/1024/histogram5-4      303µs ± 1%
+ServeHTTP/1024/label5-4         76.3µs ± 4%
+ServeHTTP/1024/label2x3x5-4     75.8µs ± 3%
+ServeHTTP/1024/sample-4         77.7µs ± 3%
+ServeHTTP/32768/counter-4       1.18ms ± 1%
+ServeHTTP/32768/real-4          2.15ms ± 1%
+ServeHTTP/32768/integer-4       1.20ms ± 4%
+ServeHTTP/32768/histogram5-4    13.9ms ± 2%
+ServeHTTP/32768/label5-4        2.99ms ± 1%
+ServeHTTP/32768/label2x3x5-4    2.90ms ± 4%
+ServeHTTP/32768/sample-4        2.70ms ± 6%
 
-name                           speed
-ServeHTTP/32/counter-12         934MB/s ± 0%
-ServeHTTP/32/real-12            494MB/s ± 0%
-ServeHTTP/32/integer-12         900MB/s ± 0%
-ServeHTTP/32/histogram5-12      728MB/s ± 0%
-ServeHTTP/32/label5-12          619MB/s ± 1%
-ServeHTTP/32/label2x3x5-12      795MB/s ± 1%
-ServeHTTP/32/sample-12          489MB/s ± 0%
-ServeHTTP/1024/counter-12      1.59GB/s ± 1%
-ServeHTTP/1024/real-12          705MB/s ± 3%
-ServeHTTP/1024/integer-12      1.47GB/s ± 2%
-ServeHTTP/1024/histogram5-12    836MB/s ± 1%
-ServeHTTP/1024/label5-12        826MB/s ± 4%
-ServeHTTP/1024/label2x3x5-12   1.06GB/s ± 3%
-ServeHTTP/1024/sample-12        693MB/s ± 1%
-ServeHTTP/32768/counter-12     1.67GB/s ± 3%
-ServeHTTP/32768/real-12         760MB/s ± 3%
-ServeHTTP/32768/integer-12     1.61GB/s ± 2%
-ServeHTTP/32768/histogram5-12   793MB/s ± 1%
-ServeHTTP/32768/label5-12       821MB/s ± 1%
-ServeHTTP/32768/label2x3x5-12  1.02GB/s ± 1%
-ServeHTTP/32768/sample-12       732MB/s ± 1%
+name                          alloc/op
+Label/sequential/4-4             0.00B     
+Label/sequential/4x4-4           0.00B     
+Label/sequential/4x4x4-4         0.00B     
+Label/parallel/4-4               0.00B     
+Label/parallel/4x4-4             0.00B     
+Label/parallel/4x4x4-4           0.00B     
+Get/histogram5/sequential-4      0.00B     
+Get/histogram5/2routines-4       0.00B     
+Set/real/sequential-4            0.00B     
+Set/real/2routines-4             0.00B     
+Set/sample/sequential-4          0.00B     
+Set/sample/2routines-4           0.00B     
+Add/counter/sequential-4         0.00B     
+Add/counter/2routines-4          0.00B     
+Add/integer/sequential-4         0.00B     
+Add/integer/2routines-4          0.00B     
+Add/histogram5/sequential-4      0.00B     
+Add/histogram5/2routines-4       0.00B     
+ServeHTTP/32/counter-4            560B ± 0%
+ServeHTTP/32/real-4               512B ± 0%
+ServeHTTP/32/integer-4            560B ± 0%
+ServeHTTP/32/histogram5-4       1.19kB ± 0%
+ServeHTTP/32/label5-4             560B ± 0%
+ServeHTTP/32/label2x3x5-4         752B ± 0%
+ServeHTTP/32/sample-4             512B ± 0%
+ServeHTTP/1024/counter-4          560B ± 0%
+ServeHTTP/1024/real-4             560B ± 0%
+ServeHTTP/1024/integer-4          560B ± 0%
+ServeHTTP/1024/histogram5-4     1.19kB ± 0%
+ServeHTTP/1024/label5-4           560B ± 0%
+ServeHTTP/1024/label2x3x5-4       576B ± 0%
+ServeHTTP/1024/sample-4           560B ± 0%
+ServeHTTP/32768/counter-4         565B ± 0%
+ServeHTTP/32768/real-4            569B ± 0%
+ServeHTTP/32768/integer-4         565B ± 0%
+ServeHTTP/32768/histogram5-4    1.26kB ± 0%
+ServeHTTP/32768/label5-4          573B ± 0%
+ServeHTTP/32768/label2x3x5-4      588B ± 0%
+ServeHTTP/32768/sample-4          571B ± 0%
+
+name                          allocs/op
+Label/sequential/4-4              0.00     
+Label/sequential/4x4-4            0.00     
+Label/sequential/4x4x4-4          0.00     
+Label/parallel/4-4                0.00     
+Label/parallel/4x4-4              0.00     
+Label/parallel/4x4x4-4            0.00     
+Get/histogram5/sequential-4       0.00     
+Get/histogram5/2routines-4        0.00     
+Set/real/sequential-4             0.00     
+Set/real/2routines-4              0.00     
+Set/sample/sequential-4           0.00     
+Set/sample/2routines-4            0.00     
+Add/counter/sequential-4          0.00     
+Add/counter/2routines-4           0.00     
+Add/integer/sequential-4          0.00     
+Add/integer/2routines-4           0.00     
+Add/histogram5/sequential-4       0.00     
+Add/histogram5/2routines-4        0.00     
+ServeHTTP/32/counter-4            5.00 ± 0%
+ServeHTTP/32/real-4               5.00 ± 0%
+ServeHTTP/32/integer-4            5.00 ± 0%
+ServeHTTP/32/histogram5-4         10.0 ± 0%
+ServeHTTP/32/label5-4             5.00 ± 0%
+ServeHTTP/32/label2x3x5-4         6.00 ± 0%
+ServeHTTP/32/sample-4             5.00 ± 0%
+ServeHTTP/1024/counter-4          5.00 ± 0%
+ServeHTTP/1024/real-4             5.00 ± 0%
+ServeHTTP/1024/integer-4          5.00 ± 0%
+ServeHTTP/1024/histogram5-4       10.0 ± 0%
+ServeHTTP/1024/label5-4           5.00 ± 0%
+ServeHTTP/1024/label2x3x5-4       5.00 ± 0%
+ServeHTTP/1024/sample-4           5.00 ± 0%
+ServeHTTP/32768/counter-4         5.00 ± 0%
+ServeHTTP/32768/real-4            5.00 ± 0%
+ServeHTTP/32768/integer-4         5.00 ± 0%
+ServeHTTP/32768/histogram5-4      10.0 ± 0%
+ServeHTTP/32768/label5-4          5.00 ± 0%
+ServeHTTP/32768/label2x3x5-4      5.00 ± 0%
+ServeHTTP/32768/sample-4          5.00 ± 0%
+
+name                          speed
+ServeHTTP/32/counter-4        1.75GB/s ± 0%
+ServeHTTP/32/real-4            754MB/s ± 1%
+ServeHTTP/32/integer-4        1.67GB/s ± 1%
+ServeHTTP/32/histogram5-4      878MB/s ± 0%
+ServeHTTP/32/label5-4          889MB/s ± 1%
+ServeHTTP/32/label2x3x5-4     1.14GB/s ± 2%
+ServeHTTP/32/sample-4          625MB/s ± 1%
+ServeHTTP/1024/counter-4      2.03GB/s ± 1%
+ServeHTTP/1024/real-4          914MB/s ± 2%
+ServeHTTP/1024/integer-4      1.94GB/s ± 1%
+ServeHTTP/1024/histogram5-4    946MB/s ± 1%
+ServeHTTP/1024/label5-4       1.06GB/s ± 4%
+ServeHTTP/1024/label2x3x5-4   1.38GB/s ± 3%
+ServeHTTP/1024/sample-4        735MB/s ± 3%
+ServeHTTP/32768/counter-4     1.92GB/s ± 1%
+ServeHTTP/32768/real-4         929MB/s ± 1%
+ServeHTTP/32768/integer-4     1.83GB/s ± 4%
+ServeHTTP/32768/histogram5-4   690MB/s ± 2%
+ServeHTTP/32768/label5-4       921MB/s ± 1%
+ServeHTTP/32768/label2x3x5-4  1.21GB/s ± 4%
+ServeHTTP/32768/sample-4       742MB/s ± 5%
 ```
