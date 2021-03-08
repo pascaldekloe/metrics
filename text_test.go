@@ -34,6 +34,9 @@ func TestWriteTo(t *testing.T) {
 
 	buf.Reset()
 	n, err = reg.WriteTo(&buf)
+	if err != nil {
+		t.Fatal("got error:", err)
+	}
 	if n != int64(buf.Len()) {
 		t.Errorf("n = %d with %d bytes written", n, buf.Len())
 	}
