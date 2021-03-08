@@ -11,21 +11,10 @@ This is free and unencumbered software released into the
 
 ## Use
 
-```go
-import "github.com/pascaldekloe/metrics"
-
-func main() {
-	// mount exposition point
-	http.HandleFunc("/metrics", metrics.ServeHTTP)
-
-	// good to go…
-}
-```
-
-The registration functions require no further configuration.
+Metric regisration on package level comes recommened. The declarations help to
+document the provided funcionality too.
 
 ```go
-// Package Metrics
 var (
 	ConnectCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
 	CacheBytes   = metrics.MustInteger("db_cache_bytes", "Size of collective responses.")
@@ -33,9 +22,10 @@ var (
 )
 ```
 
-Updates are error free by design, e.g., `CacheBytes.Add(-72)` and
-`DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`. The result may
-look like the following.
+Updates are error free by design, e.g., `CacheBytes.Add(-72)` or
+`DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
+
+Serve HTTP with just `http.HandleFunc("/metrics", metrics.ServeHTTP)`.
 
 ```
 < HTTP/1.1 200 OK
@@ -60,11 +50,9 @@ db_disk_usage_ratio{device="sda"} 0.19 1615130563595
 Package `github.com/pascaldekloe/metrics/gostat` provides a defacto standard
 collection of Go metrics, similar to the setup from the
 [original Prometheus library](https://github.com/prometheus/client_golang).
-
-```go
-// include default metrics (optional)
-gostat.CaptureEvery(time.Minute)
-```
+See the
+[lazy example](https://pkg.go.dev/github.com/pascaldekloe/metrics#example-Sample-Lazy)
+for detail on capturing.
 
 
 ## Performance
