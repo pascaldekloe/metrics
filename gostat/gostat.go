@@ -6,18 +6,37 @@ package gostat
 
 import (
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/pascaldekloe/metrics"
 )
 
+var modulePath, moduleVersion, moduleChecksum = getModulePathVersionChecksum()
+
+func getModulePathVersionChecksum() (string, string, string) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown", "unknown", "unknown"
+	}
+	return info.Main.Path, info.Main.Version, info.Main.Sum
+}
+
 func init() {
+	// fix go_info
 	metrics.MustHelp("go_info", "Information about the Go environment.")
 	GoInfo.Set(1)
+
+	// fix go_build_info
+	metrics.MustHelp("go_build_info", "Build information about the main Go module.")
+	BuildInfo.Set(1)
 }
 
 // GoInfo is set to 1.
 var GoInfo = metrics.Must1LabelInteger("go_info", "version")(runtime.Version())
+
+// BuildInfo is set to 1.
+var BuildInfo = metrics.Must3LabelInteger("go_build_info", "path", "version", "checksum")(modulePath, moduleVersion, moduleChecksum)
 
 // Runtime Samples
 var (

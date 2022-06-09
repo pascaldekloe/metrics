@@ -1,3 +1,3 @@
 module github.com/pascaldekloe/metrics
 
-go 1.10
+go 1.12
