@@ -1061,7 +1061,7 @@ func sort3(s1, s2, s3 *string) (order int) {
 			order = order132
 		} else {
 			*s1, *s2, *s3 = *s3, *s1, *s2
-			order = order312
+			order = order231
 		}
 	} else {
 		if *s1 < *s3 {
@@ -1069,7 +1069,7 @@ func sort3(s1, s2, s3 *string) (order int) {
 			order = order213
 		} else if *s2 < *s3 {
 			*s1, *s2, *s3 = *s2, *s3, *s1
-			order = order231
+			order = order312
 		} else {
 			*s1, *s3 = *s3, *s1
 			order = order321
