@@ -1,4 +1,4 @@
-[![API Documentation](https://godoc.org/github.com/pascaldekloe/metrics?status.svg)](https://godoc.org/github.com/pascaldekloe/metrics)
+[![Go Reference](https://pkg.go.dev/badge/github.com/pascaldekloe/metrics.svg)](https://pkg.go.dev/github.com/pascaldekloe/metrics)
 [![Build Status](https://travis-ci.org/pascaldekloe/metrics.svg?branch=master)](https://travis-ci.org/pascaldekloe/metrics)
 
 ## About
