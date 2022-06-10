@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"reflect"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pascaldekloe/metrics"
+	"github.com/pascaldekloe/metrics/gostat"
 )
 
 func TestName(t *testing.T) {
@@ -95,6 +97,31 @@ func TestHelp(t *testing.T) {
 			t.Errorf("got %q for %q, want %q", s, name, help)
 		}
 	}
+}
+
+var (
+	LogSize = metrics.MustRealSample("log_bytes", "Size reported by the filesystem.")
+	LogIdle = metrics.MustRealSample("log_idle_seconds", "Duration since last change.")
+)
+
+func ExampleSample_lazy() {
+	// mount exposition point
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		// update standard samples
+		gostat.Capture()
+
+		// update custom samples
+		log, err := os.Stat("./mission.log")
+		if err == nil { // ⚠️ reverse error check
+			now := time.Now()
+			LogSize.Set(float64(log.Size()), now)
+			LogIdle.SetSeconds(now.Sub(log.ModTime()), now)
+		}
+
+		// serve serialized
+		metrics.ServeHTTP(w, r)
+	})
+	// Output:
 }
 
 func ExampleHistogram() {
