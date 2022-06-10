@@ -137,12 +137,22 @@ func (m *Real) Set(update float64) {
 	atomic.StoreUint64(&m.valueBits, math.Float64bits(update))
 }
 
+// SetSeconds defines the current value.
+func (m *Real) SetSeconds(update time.Duration) {
+	m.Set(float64(update) / float64(time.Second))
+}
+
 // Set defines the current value.
 func (m *Sample) Set(value float64, timestamp time.Time) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	m.value = value
 	m.timestamp = uint64(timestamp.UnixNano()) / 1e6
+}
+
+// SetSeconds defines the current value.
+func (m *Sample) SetSeconds(value time.Duration, timestamp time.Time) {
+	m.Set(float64(value)/float64(time.Second), timestamp)
 }
 
 // Add increments the current value with n.
