@@ -165,7 +165,6 @@ func (reg *Register) MustHistogram(name, help string, buckets ...float64) *Histo
 	comment := helpComment(name, help)
 
 	h := newHistogram(name, buckets)
-	h.prefix(name)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()

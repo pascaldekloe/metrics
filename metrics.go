@@ -294,7 +294,7 @@ func newHistogram(name string, bucketBounds []float64) *Histogram {
 	// with CPU cache lines up to 128 bytes in size.
 	bucketCounts := make([]uint64, 2*16*len(bucketBounds))
 
-	return &Histogram{
+	h := Histogram{
 		bucketPrefixes: make([]string, len(bucketBounds)+1),
 		BucketBounds:   bucketBounds,
 		hotAndColdBuckets: [2][]uint64{
@@ -302,9 +302,8 @@ func newHistogram(name string, bucketBounds []float64) *Histogram {
 			bucketCounts[len(bucketCounts)/2:],
 		},
 	}
-}
 
-func (h *Histogram) prefix(name string) {
+	// install fixed start of serial lines
 	for i, f := range h.BucketBounds {
 		const suffixHead, suffixTail = `{le="`, `"} `
 		var buf strings.Builder
@@ -316,9 +315,10 @@ func (h *Histogram) prefix(name string) {
 		h.bucketPrefixes[i] = buf.String()
 	}
 	h.bucketPrefixes[len(h.BucketBounds)] = name + `{le="+Inf"} `
-
 	h.countPrefix = name + "_count "
 	h.sumPrefix = name + "_sum "
+
+	return &h
 }
 
 // Get appends the observation counts for each Histogram.BucketBounds to a and
