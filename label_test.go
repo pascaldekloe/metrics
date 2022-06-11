@@ -7,6 +7,31 @@ import (
 	"github.com/pascaldekloe/metrics"
 )
 
+// TestLabels verifies the codec roundtrip.
+func TestLabels(t *testing.T) {
+	reg := metrics.NewRegister()
+
+	switch got := reg.Must1LabelCounter("plain", "foo")("bar").Labels(); {
+	case len(got) != 1, got["foo"] != "bar":
+		t.Errorf(`got %q, want {"foo": "bar"}`, got)
+	}
+
+	switch got := reg.Must3LabelReal("escapes", "a", "b", "c")("\\", "\n", "\"").Labels(); {
+	case len(got) != 3, got["a"] != "\\", got["b"] != "\n", got["c"] != "\"":
+		t.Errorf(`got %q, want {"a": "\\", "b": "\n", "c": "\""}`, got)
+	}
+
+	// values may contain *any* byte sequence
+	var all [256]byte
+	for i := range all {
+		all[i] = byte(i)
+	}
+	switch got := reg.Must1LabelCounter("raw", "foo")(string(all[:])).Labels(); {
+	case len(got) != 1, got["foo"] != string(all[:]):
+		t.Errorf(`got %q, want {"foo": %q}`, got, all)
+	}
+}
+
 func Example_labels() {
 	// setup
 	demo := metrics.NewRegister()

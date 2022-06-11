@@ -105,7 +105,22 @@ func (m *Real) Name() string { return parseMetricName(m.prefix) }
 func (m *Sample) Name() string { return parseMetricName(m.prefix) }
 
 // Name returns the metric identifier.
-func (h *Histogram) Name() string { return parseMetricName(h.bucketPrefixes[0]) }
+func (m *Histogram) Name() string { return parseMetricName(m.bucketPrefixes[0]) }
+
+// Labels returns a new map if m has labels.
+func (m *Counter) Labels() map[string]string { return parseMetricLabels(m.prefix) }
+
+// Labels returns a new map if m has labels.
+func (m *Integer) Labels() map[string]string { return parseMetricLabels(m.prefix) }
+
+// Labels returns a new map if m has labels.
+func (m *Real) Labels() map[string]string { return parseMetricLabels(m.prefix) }
+
+// Labels returns a new map if m has labels.
+func (m *Sample) Labels() map[string]string { return parseMetricLabels(m.prefix) }
+
+// Labels returns a new map if m has labels.
+func (m *Histogram) Labels() map[string]string { return parseMetricLabels(m.bucketPrefixes[0]) }
 
 // Get returns the current value.
 func (m *Counter) Get() uint64 {

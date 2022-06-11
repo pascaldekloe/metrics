@@ -300,6 +300,7 @@ func (mapping *labelMapping) lockIndex(hash uint64) int {
 	return i
 }
 
+// Labels values may have any [!] byte content, i.e., there is no illegal value.
 var valueEscapes = strings.NewReplacer("\n", `\n`, `"`, `\"`, `\`, `\\`)
 
 func (mapping *labelMapping) format1LabelPrefix(labelValue string) string {
@@ -354,6 +355,49 @@ func (mapping *labelMapping) format3LabelPrefix(labelValue1, labelValue2, labelV
 	buf.WriteString(`"} `)
 
 	return buf.String()
+}
+
+// ParseMetricLabels returns a new map if s has labels.
+func parseMetricLabels(s string) map[string]string {
+	i := strings.IndexByte(s, '{')
+	if i < 0 {
+		return nil
+	}
+	s = s[i+1:]
+	labels := make(map[string]string, 3)
+
+	for {
+		name := s[:strings.IndexByte(s, '=')]
+		s = s[len(name)+2:] // skips double-quote check
+
+		end := strings.IndexAny(s, `"\`)
+		if s[end] == '"' {
+			labels[name] = s[:end]
+		} else {
+			var buf strings.Builder
+			for {
+				buf.WriteString(s[:end])
+				if s[end] == '"' {
+					break
+				}
+
+				if s[end+1] == 'n' {
+					buf.WriteByte('\n')
+					s = s[end+2:]
+					end = strings.IndexAny(s, `"\`)
+				} else {
+					s = s[end+1:]
+					end = 1 + strings.IndexAny(s[1:], `"\`)
+				}
+			}
+			labels[name] = buf.String()
+		}
+
+		if s[end+1] == '}' {
+			return labels
+		}
+		s = s[end+2:] // skips comma check
+	}
 }
 
 /////////////////////////
