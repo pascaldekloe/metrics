@@ -46,7 +46,7 @@ const (
 type Counter struct {
 	// value first due atomic alignment requirement
 	value uint64
-	// sample line start as in <name> <label-map>? ' '
+	// fixed start of serial line is <name> <label-map>? ' '
 	prefix string
 }
 
@@ -56,7 +56,7 @@ type Counter struct {
 type Integer struct {
 	// value first due atomic alignment requirement
 	value int64
-	// sample line start as in <name> <label-map>? ' '
+	// fixed start of serial line is <name> <label-map>? ' '
 	prefix string
 }
 
@@ -66,7 +66,7 @@ type Integer struct {
 type Real struct {
 	// value first due atomic alignment requirement
 	valueBits uint64
-	// sample line start as in <name> <label-map>? ' '
+	// fixed start of serial line is <name> <label-map>? ' '
 	prefix string
 }
 
@@ -80,30 +80,32 @@ type Sample struct {
 	mux       sync.Mutex
 	value     float64 // current capture
 	timestamp uint64  // capture moment
-	// sample line start as in <name> <label-map>? ' '
+	// fixed start of serial line is <name> <label-map>? ' '
 	prefix string
 }
 
-func nameFromPrefix(prefix string) string {
-	for i, r := range prefix {
-		if r == ' ' || r == '{' {
-			return prefix[:i]
-		}
+func parseMetricName(s string) string {
+	i := strings.IndexAny(s, " {")
+	if i >= 0 {
+		return s[:i]
 	}
-	return prefix
+	return s
 }
 
 // Name returns the metric identifier.
-func (m *Counter) Name() string { return nameFromPrefix(m.prefix) }
+func (m *Counter) Name() string { return parseMetricName(m.prefix) }
 
 // Name returns the metric identifier.
-func (m *Integer) Name() string { return nameFromPrefix(m.prefix) }
+func (m *Integer) Name() string { return parseMetricName(m.prefix) }
 
 // Name returns the metric identifier.
-func (m *Real) Name() string { return nameFromPrefix(m.prefix) }
+func (m *Real) Name() string { return parseMetricName(m.prefix) }
 
 // Name returns the metric identifier.
-func (m *Sample) Name() string { return nameFromPrefix(m.prefix) }
+func (m *Sample) Name() string { return parseMetricName(m.prefix) }
+
+// Name returns the metric identifier.
+func (h *Histogram) Name() string { return parseMetricName(h.bucketPrefixes[0]) }
 
 // Get returns the current value.
 func (m *Counter) Get() uint64 {
@@ -202,12 +204,12 @@ type Histogram struct {
 	// This field is read-only.
 	BucketBounds []float64
 
-	// metric identifier
-	name string
-
-	// corresponding name + label serials for each BucketBounds, including +Inf
-	bucketPrefixes         []string
-	sumPrefix, countPrefix string
+	// fixed start of each serial line is <name> '{le="' … '"} '
+	bucketPrefixes []string // including +Inf
+	// fixed start of serial line is <name> '_sum '
+	sumPrefix string
+	// fixed start of serial line is <name> '_count '
+	countPrefix string
 
 	// locked on hotAndCold switch (by reads)
 	switchMutex sync.Mutex
@@ -278,7 +280,6 @@ func newHistogram(name string, bucketBounds []float64) *Histogram {
 	bucketCounts := make([]uint64, 2*16*len(bucketBounds))
 
 	return &Histogram{
-		name:           name,
 		bucketPrefixes: make([]string, len(bucketBounds)+1),
 		BucketBounds:   bucketBounds,
 		hotAndColdBuckets: [2][]uint64{
@@ -304,9 +305,6 @@ func (h *Histogram) prefix(name string) {
 	h.countPrefix = name + "_count "
 	h.sumPrefix = name + "_sum "
 }
-
-// Name returns the metric identifier.
-func (h *Histogram) Name() string { return h.name }
 
 // Get appends the observation counts for each Histogram.BucketBounds to a and
 // returns the resulting slice (as buckets). The count return has the total
