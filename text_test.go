@@ -70,8 +70,6 @@ func TestServeHTTP(t *testing.T) {
 		t.Errorf("got content type %q, want plain text", contentType)
 	} else if params["version"] != "0.0.4" {
 		t.Errorf("got content type %q, want version 0.0.4", contentType)
-	} else if params["charset"] != "utf-8" {
-		t.Errorf("got content type %q, want utf-8 charset", contentType)
 	}
 
 	const want = `# Prometheus Samples

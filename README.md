@@ -28,7 +28,7 @@ Serve HTTP with just `http.HandleFunc("/metrics", metrics.ServeHTTP)`.
 
 ```
 < HTTP/1.1 200 OK
-< Content-Type: text/plain;version=0.0.4;charset=utf-8
+< Content-Type: text/plain;version=0.0.4
 < Date: Sun, 07 Mar 2021 15:22:47 GMT
 < Content-Length: 351
 < 
