@@ -71,8 +71,7 @@ func (reg *Register) WriteTo(w io.Writer) (n int64, err error) {
 
 	// serialise samples in order of appearance
 	for _, m := range reg.metrics {
-		buf = append(buf, m.typeComment...)
-		buf = append(buf, m.helpComment...)
+		buf = append(buf, m.comments...)
 
 		switch m.typeID {
 		case counterID:

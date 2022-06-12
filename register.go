@@ -14,11 +14,13 @@ const (
 	histogramID
 )
 
+// Help comments may have any [!] byte content, i.e., there is no illegal value.
+var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
+
 // Metric is a named record.
 type metric struct {
-	typeID      uint
-	typeComment string
-	helpComment string
+	typeID   uint
+	comments string // TYPE + optional HELP
 
 	counter   *Counter
 	integer   *Integer
@@ -27,6 +29,31 @@ type metric struct {
 	sample    *Sample
 
 	labels []*labelMapping
+}
+
+func newMetric(name, help string, typeID uint) *metric {
+	// compose comments
+	var buf strings.Builder
+	buf.Grow(len(name)*2 + len(help) + 27)
+	buf.WriteString("\n# TYPE ")
+	buf.WriteString(name)
+	switch typeID {
+	case counterID, counterSampleID:
+		buf.WriteString(" counter")
+	case integerID, realID, realSampleID:
+		buf.WriteString(" gauge")
+	case histogramID:
+		buf.WriteString(" histogram")
+	}
+	if help != "" {
+		buf.WriteString("\n# HELP ")
+		buf.WriteString(name)
+		buf.WriteByte(' ')
+		helpEscapes.WriteString(&buf, help)
+	}
+	buf.WriteByte('\n')
+
+	return &metric{typeID: typeID, comments: buf.String()}
 }
 
 func (m *metric) mustLabel(name, labelName1, labelName2, labelName3 string) *labelMapping {
@@ -63,6 +90,39 @@ func NewRegister() *Register {
 	return &Register{indices: make(map[string]uint32)}
 }
 
+func (reg *Register) mustGetOrSetMetric(name string, m *metric) *metric {
+	if index, ok := reg.indices[name]; ok {
+		// get it is
+		got := reg.metrics[index]
+		if got.typeID != m.typeID {
+			panic("metrics: name already in use as another type")
+		}
+		return got
+	}
+
+	// set it is
+	reg.indices[name] = uint32(len(reg.metrics))
+	reg.metrics = append(reg.metrics, m)
+	return m
+}
+
+func (reg *Register) mustGetOrCreateMetric(name string, typeID uint) *metric {
+	if index, ok := reg.indices[name]; ok {
+		// get it is
+		got := reg.metrics[index]
+		if got.typeID != typeID {
+			panic("metrics: name already in use as another type")
+		}
+		return got
+	}
+
+	// create it is
+	m := newMetric(name, "", typeID)
+	reg.indices[name] = uint32(len(reg.metrics))
+	reg.metrics = append(reg.metrics, m)
+	return m
+}
+
 // MustCounter registers a new Counter. Registration panics when name
 // was registered before, or when name doesn't match regular expression
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
@@ -75,17 +135,14 @@ func MustCounter(name, help string) *Counter {
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustCounter(name, help string) *Counter {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
+	m := newMetric(name, help, counterID)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, counterTypeLineEnd, counterID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.counter != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.counter = &Counter{prefix: name + " "}
 	return m.counter
 }
@@ -102,17 +159,14 @@ func MustInteger(name, help string) *Integer {
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustInteger(name, help string) *Integer {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
+	m := newMetric(name, help, integerID)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, gaugeTypeLineEnd, integerID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.integer != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.integer = &Integer{prefix: name + " "}
 	return m.integer
 }
@@ -129,17 +183,14 @@ func MustReal(name, help string) *Real {
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustReal(name, help string) *Real {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
+	m := newMetric(name, help, realID)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, gaugeTypeLineEnd, realID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.real != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.real = &Real{prefix: name + " "}
 	return m.real
 }
@@ -162,19 +213,15 @@ func MustHistogram(name, help string, buckets ...float64) *Histogram {
 // implied when absent. Any ∞ or not-a-number (NaN) value is ignored.
 func (reg *Register) MustHistogram(name, help string, buckets ...float64) *Histogram {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
-
+	m := newMetric(name, help, histogramID)
 	h := newHistogram(name, buckets)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, histogramTypeLineEnd, histogramID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.histogram != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.histogram = h
 	return h
 }
@@ -191,17 +238,14 @@ func MustRealSample(name, help string) *Sample {
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustRealSample(name, help string) *Sample {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
+	m := newMetric(name, help, realSampleID)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.sample = &Sample{prefix: name + " "}
 	return m.sample
 }
@@ -218,17 +262,14 @@ func MustCounterSample(name, help string) *Sample {
 // [a-zA-Z_:][a-zA-Z0-9_:]*. Help is an optional comment text.
 func (reg *Register) MustCounterSample(name, help string) *Sample {
 	mustValidMetricName(name)
-	comment := helpComment(name, help)
+	m := newMetric(name, help, counterSampleID)
 
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
-
-	m := reg.mustMetric(name, counterTypeLineEnd, counterSampleID)
+	m = reg.mustGetOrSetMetric(name, m)
 	if m.sample != nil {
 		panic("metrics: name already in use")
 	}
-
-	m.helpComment = comment
 	m.sample = &Sample{prefix: name + " "}
 	return m.sample
 }
@@ -261,7 +302,7 @@ func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue s
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, labelName, "", "")
 	reg.mutex.Unlock()
 
 	return l.counter1
@@ -301,7 +342,7 @@ func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
 	if flip {
@@ -340,7 +381,7 @@ func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name 
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
 	switch order {
@@ -389,7 +430,7 @@ func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue s
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, labelName, "", "")
 	reg.mutex.Unlock()
 
 	return l.integer1
@@ -429,7 +470,7 @@ func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
 	if flip {
@@ -468,7 +509,7 @@ func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name 
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, integerID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
 	switch order {
@@ -517,7 +558,7 @@ func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue stri
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, labelName, "", "")
 	reg.mutex.Unlock()
 
 	return l.real1
@@ -557,7 +598,7 @@ func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(la
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
 	if flip {
@@ -596,7 +637,7 @@ func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name str
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
 	switch order {
@@ -645,7 +686,7 @@ func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelV
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, labelName, "", "")
 	reg.mutex.Unlock()
 
 	return l.sample1
@@ -685,7 +726,7 @@ func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
 	if flip {
@@ -724,7 +765,7 @@ func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, counterTypeLineEnd, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
 	switch order {
@@ -773,7 +814,7 @@ func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValu
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, labelName, "", "")
 	reg.mutex.Unlock()
 
 	return l.sample1
@@ -813,7 +854,7 @@ func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) f
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, label1Name, label2Name, "")
 	reg.mutex.Unlock()
 
 	if flip {
@@ -852,7 +893,7 @@ func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Na
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, gaugeTypeLineEnd, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
+	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
 	reg.mutex.Unlock()
 
 	switch order {
@@ -907,7 +948,7 @@ func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...floa
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, labelName, "", "")
+	l := reg.mustGetOrCreateMetric(name, histogramID).mustLabel(name, labelName, "", "")
 	l.buckets = buckets
 	reg.mutex.Unlock()
 
@@ -954,7 +995,7 @@ func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, bu
 	}
 
 	reg.mutex.Lock()
-	l := reg.mustMetric(name, histogramTypeLineEnd, histogramID).mustLabel(name, label1Name, label2Name, "")
+	l := reg.mustGetOrCreateMetric(name, histogramID).mustLabel(name, label1Name, label2Name, "")
 	l.buckets = buckets
 	reg.mutex.Unlock()
 
@@ -962,24 +1003,6 @@ func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, bu
 		return l.histogram21
 	}
 	return l.histogram12
-}
-
-func (reg *Register) mustMetric(name, typeLineEnd string, typeID uint) *metric {
-	if index, ok := reg.indices[name]; ok {
-		m := reg.metrics[index]
-		if m.typeID != typeID {
-			panic("metrics: name in use as another type")
-		}
-
-		return m
-	}
-
-	m := &metric{typeComment: typePrefix + name + typeLineEnd, typeID: typeID}
-
-	reg.indices[name] = uint32(len(reg.metrics))
-	reg.metrics = append(reg.metrics, m)
-
-	return m
 }
 
 func mustValidNames(metricName string, labelNames ...string) {
@@ -1031,15 +1054,33 @@ func MustHelp(name, text string) {
 // MustHelp sets the comment for the metric name. Any previous text is replaced.
 // The function panics when name is not in use.
 func (reg *Register) MustHelp(name, text string) {
-	comment := helpComment(name, text)
-
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	m := reg.metrics[reg.indices[name]]
 	if m == nil {
 		panic("metrics: name not in use")
 	}
-	m.helpComment = comment
-	reg.mutex.Unlock()
+
+	// new-line characters are escaped in comments and label values
+	i := strings.Index(m.comments, "\n# HELP ")
+	if i >= 0 {
+		// remove previous, but keep the new-line
+		m.comments = m.comments[:i+1]
+	}
+
+	if text == "" {
+		return // ommits HELP comment
+	}
+
+	var buf strings.Builder
+	buf.Grow(len(m.comments) + len(name) + len(text) + 9)
+	buf.WriteString(m.comments)
+	buf.WriteString("# HELP ")
+	buf.WriteString(name)
+	buf.WriteByte(' ')
+	helpEscapes.WriteString(&buf, text)
+	buf.WriteByte('\n')
+	m.comments = buf.String()
 }
 
 const (
@@ -1075,21 +1116,4 @@ func sort3(s1, s2, s3 *string) (order int) {
 		}
 	}
 	return
-}
-
-var helpEscapes = strings.NewReplacer("\n", `\n`, `\`, `\\`)
-
-func helpComment(name, text string) string {
-	if text == "" {
-		return text
-	}
-
-	var buf strings.Builder
-	buf.Grow(len(helpPrefix) + len(name) + len(text) + 2)
-	buf.WriteString(helpPrefix)
-	buf.WriteString(name)
-	buf.WriteByte(' ')
-	helpEscapes.WriteString(&buf, text)
-	buf.WriteByte('\n')
-	return buf.String()
 }

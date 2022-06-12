@@ -20,18 +20,6 @@ import (
 	"time"
 )
 
-// Special Comments
-const (
-	// line starts
-	typePrefix = "\n# TYPE "
-	helpPrefix = "# HELP "
-
-	// terminations of TYPE comment
-	gaugeTypeLineEnd     = " gauge\n"
-	counterTypeLineEnd   = " counter\n"
-	histogramTypeLineEnd = " histogram\n"
-)
-
 // Serialisation Byte Limits
 const (
 	maxFloat64Text = 24
