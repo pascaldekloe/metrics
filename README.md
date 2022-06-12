@@ -2,7 +2,10 @@
 
 ## About
 
-Atomic measures with Prometheus exposition for the Go programming language.
+Metrics are measures of quantitative assessment commonly used for comparing, and
+tracking performance or production. This library offers atomic counters, gauges
+and historgrams for the Go programming language. Users have the option to expose
+snapshots in the Prometheus text-format.
 
 This is free and unencumbered software released into the
 [public domain](https://creativecommons.org/publicdomain/zero/1.0).
@@ -10,10 +13,11 @@ This is free and unencumbered software released into the
 
 ## Use
 
-Metric regisration on package level comes recommened. The declarations help to
-document the provided funcionality too.
+Static regisration on package level comes recommened. The declarations also help
+to document the funcionality that is covered in the code.
 
 ```go
+// Package Metrics
 var (
 	ConnectCount = metrics.MustCounter("db_connects_total", "Number of established initiations.")
 	CacheBytes   = metrics.MustInteger("db_cache_bytes", "Size of collective responses.")
@@ -21,7 +25,7 @@ var (
 )
 ```
 
-Updates are error free by design, e.g., `CacheBytes.Add(-72)` or
+Update methods operate error free by design, e.g., `CacheBytes.Add(-72)` or
 `DiskUsage(dev.Name).Set(1 - dev.Free, time.Now())`.
 
 Serve HTTP with just `http.HandleFunc("/metrics", metrics.ServeHTTP)`.
@@ -46,12 +50,13 @@ db_cache_bytes 7600 1615130567389
 db_disk_usage_ratio{device="sda"} 0.19 1615130563595
 ```
 
-Package `github.com/pascaldekloe/metrics/gostat` provides a defacto standard
-collection of Go metrics, similar to the setup from the
+Package `github.com/pascaldekloe/metrics/gostat` provides a standard collection
+of Go metrics which is similar to the setup as provided by the
 [original Prometheus library](https://github.com/prometheus/client_golang).
-See the
+
+Samples may be fetched in a lazy manner, like how the
 [lazy example](https://pkg.go.dev/github.com/pascaldekloe/metrics#example-Sample-Lazy)
-for detail on capturing.
+does.
 
 
 ## Performance
