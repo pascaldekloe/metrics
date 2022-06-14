@@ -1,4 +1,5 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/pascaldekloe/metrics.svg)](https://pkg.go.dev/github.com/pascaldekloe/metrics)
+[![API](https://pkg.go.dev/badge/github.com/pascaldekloe/metrics.svg)](https://pkg.go.dev/github.com/pascaldekloe/metrics)
+[![Build](https://github.com/pascaldekloe/metrics/actions/workflows/go.yml/badge.svg)](https://github.com/pascaldekloe/metrics/actions/workflows/go.yml)
 
 ## About
 
