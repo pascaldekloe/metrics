@@ -23,164 +23,152 @@ type labelMapping struct {
 
 func (mapping *labelMapping) counter1(value string) *Counter {
 	i := mapping.lockIndex1(value)
+	defer mapping.Unlock()
 	if i < len(mapping.counters) {
-		mapping.Unlock()
 		return mapping.counters[i]
 	}
 
 	m := &Counter{prefix: mapping.format1LabelPrefix(value)}
 	mapping.counters = append(mapping.counters, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) counter12(value1, value2 string) *Counter {
 	i := mapping.lockIndex12(value1, value2)
+	defer mapping.Unlock()
 	if i < len(mapping.counters) {
-		mapping.Unlock()
 		return mapping.counters[i]
 	}
 
 	m := &Counter{prefix: mapping.format2LabelPrefix(value1, value2)}
 	mapping.counters = append(mapping.counters, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) counter123(value1, value2, value3 string) *Counter {
 	i := mapping.lockIndex123(value1, value2, value3)
+	defer mapping.Unlock()
 	if i < len(mapping.counters) {
-		mapping.Unlock()
 		return mapping.counters[i]
 	}
 
 	m := &Counter{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
 	mapping.counters = append(mapping.counters, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) integer1(value string) *Integer {
 	i := mapping.lockIndex1(value)
+	defer mapping.Unlock()
 	if i < len(mapping.integers) {
-		mapping.Unlock()
 		return mapping.integers[i]
 	}
 
 	m := &Integer{prefix: mapping.format1LabelPrefix(value)}
 	mapping.integers = append(mapping.integers, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) integer12(value1, value2 string) *Integer {
 	i := mapping.lockIndex12(value1, value2)
+	defer mapping.Unlock()
 	if i < len(mapping.integers) {
-		mapping.Unlock()
 		return mapping.integers[i]
 	}
 
 	m := &Integer{prefix: mapping.format2LabelPrefix(value1, value2)}
 	mapping.integers = append(mapping.integers, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) integer123(value1, value2, value3 string) *Integer {
 	i := mapping.lockIndex123(value1, value2, value3)
+	defer mapping.Unlock()
 	if i < len(mapping.integers) {
-		mapping.Unlock()
 		return mapping.integers[i]
 	}
 
 	m := &Integer{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
 	mapping.integers = append(mapping.integers, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) real1(value string) *Real {
 	i := mapping.lockIndex1(value)
+	defer mapping.Unlock()
 	if i < len(mapping.reals) {
-		mapping.Unlock()
 		return mapping.reals[i]
 	}
 
 	m := &Real{prefix: mapping.format1LabelPrefix(value)}
 	mapping.reals = append(mapping.reals, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) real12(value1, value2 string) *Real {
 	i := mapping.lockIndex12(value1, value2)
+	defer mapping.Unlock()
 	if i < len(mapping.reals) {
-		mapping.Unlock()
 		return mapping.reals[i]
 	}
 
 	m := &Real{prefix: mapping.format2LabelPrefix(value1, value2)}
 	mapping.reals = append(mapping.reals, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) real123(value1, value2, value3 string) *Real {
 	i := mapping.lockIndex123(value1, value2, value3)
+	defer mapping.Unlock()
 	if i < len(mapping.reals) {
-		mapping.Unlock()
 		return mapping.reals[i]
 	}
 
 	m := &Real{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
 	mapping.reals = append(mapping.reals, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) sample1(value string) *Sample {
 	i := mapping.lockIndex1(value)
+	defer mapping.Unlock()
 	if i < len(mapping.samples) {
-		mapping.Unlock()
 		return mapping.samples[i]
 	}
 
 	m := &Sample{prefix: mapping.format1LabelPrefix(value)}
 	mapping.samples = append(mapping.samples, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) sample12(value1, value2 string) *Sample {
 	i := mapping.lockIndex12(value1, value2)
+	defer mapping.Unlock()
 	if i < len(mapping.samples) {
-		mapping.Unlock()
 		return mapping.samples[i]
 	}
 
 	m := &Sample{prefix: mapping.format2LabelPrefix(value1, value2)}
 	mapping.samples = append(mapping.samples, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) sample123(value1, value2, value3 string) *Sample {
 	i := mapping.lockIndex123(value1, value2, value3)
+	defer mapping.Unlock()
 	if i < len(mapping.samples) {
-		mapping.Unlock()
 		return mapping.samples[i]
 	}
 
 	m := &Sample{prefix: mapping.format3LabelPrefix(value1, value2, value3)}
 	mapping.samples = append(mapping.samples, m)
-	mapping.Unlock()
 	return m
 }
 
 func (mapping *labelMapping) histogram1(value string) *Histogram {
 	i := mapping.lockIndex1(value)
+	defer mapping.Unlock()
 	if i < len(mapping.histograms) {
-		mapping.Unlock()
 		return mapping.histograms[i]
 	}
 
@@ -196,15 +184,14 @@ func (mapping *labelMapping) histogram1(value string) *Histogram {
 	h.sumPrefix = mapping.name + "_sum{" + tail[2:]
 
 	mapping.histograms = append(mapping.histograms, h)
-
-	mapping.Unlock()
 	return h
 }
 
 func (mapping *labelMapping) histogram12(value1, value2 string) *Histogram {
 	i := mapping.lockIndex12(value1, value2)
+	defer mapping.Unlock()
+
 	if i < len(mapping.histograms) {
-		mapping.Unlock()
 		return mapping.histograms[i]
 	}
 
@@ -222,7 +209,6 @@ func (mapping *labelMapping) histogram12(value1, value2 string) *Histogram {
 
 	mapping.histograms = append(mapping.histograms, h)
 
-	mapping.Unlock()
 	return h
 }
 

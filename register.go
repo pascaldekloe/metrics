@@ -302,8 +302,8 @@ func (reg *Register) Must1LabelCounter(name, labelName string) func(labelValue s
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, labelName, "", "")
-	reg.mutex.Unlock()
 
 	return l.counter1
 }
@@ -342,8 +342,8 @@ func (reg *Register) Must2LabelCounter(name, label1Name, label2Name string) func
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, label1Name, label2Name, "")
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.counter21
@@ -381,8 +381,8 @@ func (reg *Register) Must3LabelCounter(name, label1Name, label2Name, label3Name 
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterID).mustLabel(name, label1Name, label2Name, label3Name)
-	reg.mutex.Unlock()
 
 	switch order {
 	case order123:
@@ -430,8 +430,8 @@ func (reg *Register) Must1LabelInteger(name, labelName string) func(labelValue s
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, labelName, "", "")
-	reg.mutex.Unlock()
 
 	return l.integer1
 }
@@ -470,8 +470,8 @@ func (reg *Register) Must2LabelInteger(name, label1Name, label2Name string) func
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, label1Name, label2Name, "")
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.integer21
@@ -509,8 +509,8 @@ func (reg *Register) Must3LabelInteger(name, label1Name, label2Name, label3Name 
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, integerID).mustLabel(name, label1Name, label2Name, label3Name)
-	reg.mutex.Unlock()
 
 	switch order {
 	case order123:
@@ -558,8 +558,8 @@ func (reg *Register) Must1LabelReal(name, labelName string) func(labelValue stri
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, labelName, "", "")
-	reg.mutex.Unlock()
 
 	return l.real1
 }
@@ -598,8 +598,8 @@ func (reg *Register) Must2LabelReal(name, label1Name, label2Name string) func(la
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, label1Name, label2Name, "")
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.real21
@@ -637,8 +637,8 @@ func (reg *Register) Must3LabelReal(name, label1Name, label2Name, label3Name str
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realID).mustLabel(name, label1Name, label2Name, label3Name)
-	reg.mutex.Unlock()
 
 	switch order {
 	case order123:
@@ -686,8 +686,8 @@ func (reg *Register) Must1LabelCounterSample(name, labelName string) func(labelV
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, labelName, "", "")
-	reg.mutex.Unlock()
 
 	return l.sample1
 }
@@ -726,8 +726,8 @@ func (reg *Register) Must2LabelCounterSample(name, label1Name, label2Name string
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, label1Name, label2Name, "")
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.sample21
@@ -765,8 +765,8 @@ func (reg *Register) Must3LabelCounterSample(name, label1Name, label2Name, label
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, counterSampleID).mustLabel(name, label1Name, label2Name, label3Name)
-	reg.mutex.Unlock()
 
 	switch order {
 	case order123:
@@ -814,8 +814,8 @@ func (reg *Register) Must1LabelRealSample(name, labelName string) func(labelValu
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, labelName, "", "")
-	reg.mutex.Unlock()
 
 	return l.sample1
 }
@@ -854,8 +854,8 @@ func (reg *Register) Must2LabelRealSample(name, label1Name, label2Name string) f
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, label1Name, label2Name, "")
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.sample21
@@ -893,8 +893,8 @@ func (reg *Register) Must3LabelRealSample(name, label1Name, label2Name, label3Na
 	order := sort3(&label1Name, &label2Name, &label3Name)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, realSampleID).mustLabel(name, label1Name, label2Name, label3Name)
-	reg.mutex.Unlock()
 
 	switch order {
 	case order123:
@@ -948,9 +948,9 @@ func (reg *Register) Must1LabelHistogram(name, labelName string, buckets ...floa
 	mustValidNames(name, labelName)
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, histogramID).mustLabel(name, labelName, "", "")
 	l.buckets = buckets
-	reg.mutex.Unlock()
 
 	return l.histogram1
 }
@@ -995,9 +995,9 @@ func (reg *Register) Must2LabelHistogram(name, label1Name, label2Name string, bu
 	}
 
 	reg.mutex.Lock()
+	defer reg.mutex.Unlock()
 	l := reg.mustGetOrCreateMetric(name, histogramID).mustLabel(name, label1Name, label2Name, "")
 	l.buckets = buckets
-	reg.mutex.Unlock()
 
 	if flip {
 		return l.histogram21
